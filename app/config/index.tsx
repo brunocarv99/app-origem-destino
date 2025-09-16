@@ -1,8 +1,18 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { Link } from "expo-router";
 import React, { useState } from "react";
-import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput } from "react-native";
+import {
+  Alert,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 export default function ConfiguracaoScreen() {
   const [rodovia, setRodovia] = useState("");
@@ -11,6 +21,7 @@ export default function ConfiguracaoScreen() {
   const [sentidoDe, setSentidoDe] = useState("");
   const [sentidoPara, setSentidoPara] = useState("");
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showResumo, setShowResumo] = useState(false);
 
   async function salvarConfiguracao() {
     try {
@@ -18,7 +29,7 @@ export default function ConfiguracaoScreen() {
         "configuracaoPesquisa",
         JSON.stringify({ rodovia, posto, data, sentidoDe, sentidoPara })
       );
-      Alert.alert("Sucesso", "Configuração salva com sucesso!");
+      setShowResumo(true); // Abre o modal de resumo
     } catch (e) {
       Alert.alert("Erro", "Não foi possível salvar a configuração.");
     }
@@ -119,26 +130,116 @@ export default function ConfiguracaoScreen() {
       <Pressable
         style={{
           ...styles.button,
-          backgroundColor: "#021b36ff", // cor verde, troque se quiser outra cor
+          backgroundColor: "#021b36ff",
         }}
         onPress={salvarConfiguracao}
       >
         <Text style={styles.buttonText}>Salvar</Text>
       </Pressable>
 
-      <Link href="/config" asChild>
-        <Pressable
-          style={{
-            ...styles.button,
-            backgroundColor: "#e9cb21f8",
-          }}
-        >
-          <Text style={styles.buttonText}>Configurar Pesquisa</Text>
-        </Pressable>
-      </Link>
+      <Pressable
+        style={{
+          ...styles.button,
+          backgroundColor: "#072531a4",
+        }}
+        onPress={() => {
+          if (typeof window !== 'undefined' && window.history) {
+            window.history.back();
+          } else {
+            // fallback para mobile
+            Alert.alert('Voltar', 'Função de voltar não disponível nesta plataforma.');
+          }
+        }}
+      >
+        <Text style={styles.buttonText}>Voltar</Text>
+      </Pressable>
+
+      {/* Modal de resumo */}
+      <Modal
+        visible={showResumo}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowResumo(false)}
+      >
+        <View style={modalStyles.overlay}>
+          <View style={modalStyles.card}>
+            <Text style={modalStyles.title}>Resumo da Configuração</Text>
+            <Text style={modalStyles.label}>
+              Rodovia:{" "}
+              <Text style={modalStyles.value}>{rodovia}</Text>
+            </Text>
+            <Text style={modalStyles.label}>
+              Posto: <Text style={modalStyles.value}>{posto}</Text>
+            </Text>
+            <Text style={modalStyles.label}>
+              Data: <Text style={modalStyles.value}>{data}</Text>
+            </Text>
+            <Text style={modalStyles.label}>
+              Sentido de:{" "}
+              <Text style={modalStyles.value}>{sentidoDe}</Text>
+            </Text>
+            <Text style={modalStyles.label}>
+              Sentido para:{" "}
+              <Text style={modalStyles.value}>{sentidoPara}</Text>
+            </Text>
+            <View style={{ flexDirection: "row", marginTop: 24, gap: 12 }}>
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: "#072531a4", flex: 1 }]}
+                onPress={() => setShowResumo(false)}
+              >
+                <Text style={styles.buttonText}>Alterar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: "#021b36ff", flex: 1 }]}
+                onPress={() => setShowResumo(false)}
+              >
+                <Text style={styles.buttonText}>Confirmar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
+
+// Adicione fora do componente principal:
+const modalStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.3)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 24,
+    width: "90%",
+    maxWidth: 400,
+    alignItems: "center",
+    elevation: 4,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 18,
+    color: "#021b36ff",
+    textAlign: "center",
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: "bold",
+    marginBottom: 4,
+    color: "#021b36ff",
+    textAlign: "left",
+    alignSelf: "flex-start",
+  },
+  value: {
+    fontWeight: "normal",
+    color: "#333",
+  },
+});
 
 const styles = StyleSheet.create({
   container: {
