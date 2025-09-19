@@ -23,17 +23,73 @@ export default function ConfiguracaoScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showResumo, setShowResumo] = useState(false);
 
+  const salvarConfig = async (respostasFixas) => {
+    try {
+      await AsyncStorage.setItem("respostasFixas", JSON.stringify(respostasFixas));
+      // ...feedback para usuário...
+    } catch (err) {
+      // ...tratamento de erro...
+    }
+  };
+
   async function salvarConfiguracao() {
     try {
-      await AsyncStorage.setItem(
-        "configuracaoPesquisa",
-        JSON.stringify({ rodovia, posto, data, sentidoDe, sentidoPara })
-      );
+      const respostasFixas = { rodovia, posto, data, sentidoDe, sentidoPara };
+      await AsyncStorage.setItem("configuracaoPesquisa", JSON.stringify(respostasFixas));
+      await AsyncStorage.setItem("respostasFixas", JSON.stringify(respostasFixas)); // <-- ADICIONE ESTA LINHA
       setShowResumo(true); // Abre o modal de resumo
     } catch (e) {
       Alert.alert("Erro", "Não foi possível salvar a configuração.");
     }
   }
+
+  const salvarPesquisa = async (respostasPesquisa) => {
+    try {
+      // Recupera respostas fixas
+      const respostasFixasStr = await AsyncStorage.getItem("respostasFixas");
+      const respostasFixas = respostasFixasStr ? JSON.parse(respostasFixasStr) : {};
+
+      // Junta respostas fixas com as da pesquisa
+      const pesquisaCompleta = {
+        ...respostasPesquisa,
+        respostasFixas,
+        data: new Date().toISOString(),
+      };
+
+      // Salva no AsyncStorage (exemplo para lista de pesquisas)
+      const pesquisasStr = await AsyncStorage.getItem("pesquisas");
+      const pesquisas = pesquisasStr ? JSON.parse(pesquisasStr) : [];
+      pesquisas.push(pesquisaCompleta);
+      await AsyncStorage.setItem("pesquisas", JSON.stringify(pesquisas));
+
+      // ...feedback para usuário...
+    } catch (err) {
+      // ...tratamento de erro...
+    }
+  };
+
+  const salvarPesquisaLocal = async (dados) => {
+    try {
+      // Recupera respostas fixas
+      const respostasFixasStr = await AsyncStorage.getItem('respostasFixas');
+      const respostasFixas = respostasFixasStr ? JSON.parse(respostasFixasStr) : {};
+
+      // Junta respostas fixas como campos individuais
+      const dadosComFixas = {
+        ...dados,
+        ...respostasFixas, // cada campo será incluído diretamente
+      };
+
+      // Recupera pesquisas já salvas (array) ou inicia um novo
+      const pesquisasSalvas = await AsyncStorage.getItem('pesquisas');
+      const pesquisas = pesquisasSalvas ? JSON.parse(pesquisasSalvas) : [];
+      pesquisas.push(dadosComFixas);
+      await AsyncStorage.setItem('pesquisas', JSON.stringify(pesquisas));
+      Alert.alert('Pesquisa salva localmente!');
+    } catch (e) {
+      Alert.alert('Erro ao salvar pesquisa');
+    }
+  };
 
   return (
     <ScrollView contentContainerStyle={styles.container}>

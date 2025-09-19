@@ -1,7 +1,30 @@
-import { Link } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Link, useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { useSyncPesquisa } from "../hooks/useSyncPesquisa";
 
 export default function HomeScreen() {
+  const [respostas, setRespostas] = useState([]);
+  const [senha, setSenha] = useState('');
+  const [autenticado, setAutenticado] = useState(false);
+  const router = useRouter();
+
+  const visualizarRespostas = async () => {
+    const pesquisasSalvas = await AsyncStorage.getItem("pesquisas");
+    setRespostas(pesquisasSalvas ? JSON.parse(pesquisasSalvas) : []);
+  };
+
+  useEffect(() => {
+    const fetchRespostas = async () => {
+      const pesquisasSalvas = await AsyncStorage.getItem('pesquisas');
+      setRespostas(pesquisasSalvas ? JSON.parse(pesquisasSalvas) : []);
+    };
+    fetchRespostas();
+  }, []);
+
+  useSyncPesquisa();
+
   return (
     <View style={styles.container}>
       {/* Logo da Strata mais para cima */}
@@ -55,19 +78,26 @@ export default function HomeScreen() {
             <Text style={styles.buttonText}>Iniciar pesquisa - Ônibus</Text>
           </Pressable>
         </Link>
-        <Link
-          href="/config"
-          asChild
-        >
+        <Link href="/config" asChild>
           <Pressable
             style={{
               ...styles.button,
-              backgroundColor: "#021b36ff",
+              backgroundColor: "#072531a4",
             }}
           >
             <Text style={styles.buttonText}>Configurar Pesquisa</Text>
           </Pressable>
         </Link>
+        <Pressable
+          style={{
+            ...styles.button,
+            backgroundColor: "#072531a4",
+          }}
+          onPress={() => router.push('/banco')}
+        >
+          <Text style={styles.buttonText}>Visualizar Respostas Salvas</Text>
+        </Pressable>
+      
       </View>
     </View>
   );
@@ -111,7 +141,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   logoDer: {
-    width: 35,      // Ajuste para um tamanho mais proporcional ao texto
+    width: 35, // Ajuste para um tamanho mais proporcional ao texto
     height: 35,
   },
   titleRow: {
@@ -142,5 +172,30 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 15,
     fontWeight: "600",
+  },
+  empty: {
+    textAlign: "center",
+    color: "#888",
+    marginTop: 20,
+  },
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    padding: 10,
+    marginVertical: 8,
+    marginHorizontal: 16,
+    elevation: 2,
+  },
+  row: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 6,
+  },
+  label: {
+    fontWeight: "bold",
+    color: "#333",
+  },
+  value: {
+    color: "#666",
   },
 });

@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Picker } from "@react-native-picker/picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
@@ -137,6 +138,34 @@ export default function Pesquisa() {
   // Comuns para ambos
   const [rendaFamiliar, setRendaFamiliar] = useState(rendas[0]);
   const [motivoViagem, setMotivoViagem] = useState(motivosViagem[0]);
+
+  // Função para salvar pesquisa localmente
+  const salvarPesquisaLocal = async (dados) => {
+    try {
+      // Recupera respostas fixas
+      const respostasFixasStr = await AsyncStorage.getItem('respostasFixas');
+      const respostasFixas = respostasFixasStr ? JSON.parse(respostasFixasStr) : {};
+
+      // Espalha cada campo das respostas fixas no objeto salvo
+      const dadosComFixas = {
+        ...dados,
+        rodovia: respostasFixas.rodovia || '',
+        posto: respostasFixas.posto || '',
+        data: respostasFixas.data || '',
+        sentidoDe: respostasFixas.sentidoDe || '',
+        sentidoPara: respostasFixas.sentidoPara || '',
+      };
+
+      // Recupera pesquisas já salvas (array) ou inicia um novo
+      const pesquisasSalvas = await AsyncStorage.getItem('pesquisas');
+      const pesquisas = pesquisasSalvas ? JSON.parse(pesquisasSalvas) : [];
+      pesquisas.push(dadosComFixas);
+      await AsyncStorage.setItem('pesquisas', JSON.stringify(pesquisas));
+      Alert.alert('Pesquisa salva localmente!');
+    } catch (e) {
+      Alert.alert('Erro ao salvar pesquisa');
+    }
+  };
 
   // FLUXO CAMINHÃO
   if (tipoParam === "caminhao" && etapa === 1) {
@@ -387,10 +416,32 @@ export default function Pesquisa() {
               title="Salvar Pesquisa"
               color="#021b36ff"
               onPress={() => {
-                Alert.alert(
-                  "Pesquisa salva!",
-                  `Classe Caminhão: ${classeCaminhao}\nOrigem: ${origemCidade} - ${origemBairro} - ${origemUf}\nDestino: ${destinoCidade} - ${destinoBairro} - ${destinoUf}\nFrequência: ${frequencia}\nEixos suspenso: ${eixosSuspenso}\nMercadoria: ${mercadoria}\nPeso bruto: ${pesoBruto}\nTara: ${tara}\nCapacidade: ${capacidade}\nVazio: ${vazio}\nRenda familiar: ${rendaFamiliar}\nMotivo da viagem: ${motivoViagem}`
-                );
+                const dados = {
+                  classeCaminhao,
+                  origemUf,
+                  origemCidade,
+                  origemBairro,
+                  destinoUf,
+                  destinoCidade,
+                  destinoBairro,
+                  frequencia,
+                  eixosSuspenso,
+                  mercadoria,
+                  pesoBruto,
+                  tara,
+                  capacidade,
+                  vazio,
+                  rendaFamiliar,
+                  motivoViagem,
+                  data: new Date().toLocaleString()
+                };
+                salvarPesquisaLocal(dados);
+                if (typeof window !== 'undefined') {
+                  window.alert('Pesquisa Salva!');
+                } else {
+                  Alert.alert('Pesquisa Salva!');
+                }
+                router.replace('/');
               }}
             />
           </View>
@@ -577,10 +628,27 @@ export default function Pesquisa() {
               title="Salvar Pesquisa"
               color="#021b36ff"
               onPress={() => {
-                Alert.alert(
-                  "Pesquisa salva!",
-                  `Tipo: ${tipoVeiculo}\nOrigem: ${origemCidade} - ${origemBairro} - ${origemUf}\nDestino: ${destinoCidade} - ${destinoBairro} - ${destinoUf}\nOcupação: ${ocupacao}\nFrequência: ${frequencia}\nRenda familiar: ${rendaFamiliar}\nMotivo da viagem: ${motivoViagem}`
-                );
+                const dados = {
+                  tipoVeiculo,
+                  origemUf,
+                  origemCidade,
+                  origemBairro,
+                  destinoUf,
+                  destinoCidade,
+                  destinoBairro,
+                  ocupacao,
+                  frequencia,
+                  rendaFamiliar,
+                  motivoViagem,
+                  data: new Date().toLocaleString()
+                };
+                salvarPesquisaLocal(dados);
+                if (typeof window !== 'undefined') {
+                  window.alert('Pesquisa Salva!');
+                } else {
+                  Alert.alert('Pesquisa Salva!');
+                }
+                router.replace('/');
               }}
             />
           </View>
@@ -740,10 +808,24 @@ export default function Pesquisa() {
               title="Salvar Pesquisa"
               color="#021b36ff"
               onPress={() => {
-                Alert.alert(
-                  "Pesquisa salva!",
-                  `Tipo de ônibus: ${tiposOnibus.find(t => t.valor === tipoOnibus)?.nome}\nOrigem: ${origemCidade} - ${origemBairro} - ${origemUf}\nDestino: ${destinoCidade} - ${destinoBairro} - ${destinoUf}\nFrequência: ${frequencia}`
-                );
+                const dados = {
+                  tipoOnibus,
+                  origemUf,
+                  origemCidade,
+                  origemBairro,
+                  destinoUf,
+                  destinoCidade,
+                  destinoBairro,
+                  frequencia,
+                  data: new Date().toLocaleString()
+                };
+                salvarPesquisaLocal(dados);
+                if (typeof window !== 'undefined') {
+                  window.alert('Pesquisa Salva!');
+                } else {
+                  Alert.alert('Pesquisa Salva!');
+                }
+                router.replace('/'); // retorna à tela inicial
               }}
             />
           </View>
@@ -830,3 +912,16 @@ const  styles = StyleSheet.create({
     alignSelf: "center",
   },
 });
+
+// Exemplo de função para salvar perguntas fixas
+const salvarPerguntasFixas = async () => {
+  const respostasFixas = {
+    rodovia: rodovia,        // valor do campo rodovia
+    posto: posto,            // valor do campo posto
+    data: data,              // valor do campo data
+    sentidoDe: sentidoDe,    // valor do campo sentidoDe
+    sentidoPara: sentidoPara // valor do campo sentidoPara
+  };
+  await AsyncStorage.setItem('respostasFixas', JSON.stringify(respostasFixas));
+  // Feedback para usuário, se quiser
+};
