@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Alert,
   Modal,
@@ -14,6 +14,9 @@ import {
   View,
 } from "react-native";
 
+// Defina a senha fixa aqui
+const SENHA_FIXA = "@trafego25";
+
 export default function ConfiguracaoScreen() {
   const [rodovia, setRodovia] = useState("");
   const [posto, setPosto] = useState("");
@@ -23,21 +26,36 @@ export default function ConfiguracaoScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showResumo, setShowResumo] = useState(false);
 
-  const salvarConfig = async (respostasFixas) => {
-    try {
-      await AsyncStorage.setItem("respostasFixas", JSON.stringify(respostasFixas));
-      // ...feedback para usuário...
-    } catch (err) {
-      // ...tratamento de erro...
+  // Estados para controle do acesso
+  const [acessoLiberado, setAcessoLiberado] = useState(false);
+  const [senhaDigitada, setSenhaDigitada] = useState("");
+  const [showSenhaModal, setShowSenhaModal] = useState(true);
+  const [erroSenha, setErroSenha] = useState(""); // NOVO ESTADO
+
+  useEffect(() => {
+    setShowSenhaModal(true);
+    setAcessoLiberado(false);
+  }, []);
+
+  function validarSenha() {
+    if (senhaDigitada === SENHA_FIXA) {
+      setAcessoLiberado(true);
+      setShowSenhaModal(false);
+      setSenhaDigitada("");
+      setErroSenha("");
+    } else {
+      setErroSenha("Senha incorreta"); // Mostra mensagem no modal
+      setSenhaDigitada("");
     }
-  };
+  }
 
   async function salvarConfiguracao() {
     try {
       const respostasFixas = { rodovia, posto, data, sentidoDe, sentidoPara };
       await AsyncStorage.setItem("configuracaoPesquisa", JSON.stringify(respostasFixas));
-      await AsyncStorage.setItem("respostasFixas", JSON.stringify(respostasFixas)); // <-- ADICIONE ESTA LINHA
-      setShowResumo(true); // Abre o modal de resumo
+      await AsyncStorage.setItem("respostasFixas", JSON.stringify(respostasFixas));
+      await AsyncStorage.setItem("senhaRestricao", SENHA_FIXA);
+      setShowResumo(true);
     } catch (e) {
       Alert.alert("Erro", "Não foi possível salvar a configuração.");
     }
@@ -92,170 +110,207 @@ export default function ConfiguracaoScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Configurar Pesquisa</Text>
-
-      <Text style={styles.label}>Rodovia:</Text>
-      <TextInput
-        style={styles.input}
-        value={rodovia}
-        onChangeText={setRodovia}
-        placeholder="Digite a rodovia"
-      />
-
-      <Text style={styles.label}>Posto:</Text>
-      <TextInput
-        style={styles.input}
-        value={posto}
-        onChangeText={setPosto}
-        placeholder="Digite o posto"
-      />
-
-      <Text style={styles.label}>Data:</Text>
-      {Platform.OS === "web" ? (
-        <input
-          type="date"
-          style={{
-            ...styles.input,
-            padding: 8,
-            fontSize: 16,
-            borderRadius: 8,
-            border: "1px solid #ccc",
-            marginBottom: 16,
-            backgroundColor: "#f9f9f9",
-          }}
-          value={
-            data
-              ? `${data.split("/")[2]}-${data.split("/")[1].padStart(2, "0")}-${data
-                  .split("/")[0]
-                  .padStart(2, "0")}`
-              : ""
-          }
-          onChange={e => {
-            const [year, month, day] = e.target.value.split("-");
-            setData(`${day}/${month}/${year}`);
-          }}
-        />
-      ) : (
-        <>
-          <Pressable onPress={() => setShowDatePicker(true)}>
-            <TextInput
-              style={styles.input}
-              value={data}
-              placeholder="Selecione a data"
-              editable={false}
-              pointerEvents="none"
-            />
-          </Pressable>
-          {showDatePicker && (
-            <DateTimePicker
-              value={data ? new Date(data.split("/").reverse().join("-")) : new Date()}
-              mode="date"
-              display="default"
-              onChange={(_, selectedDate) => {
-                setShowDatePicker(false);
-                if (selectedDate) {
-                  const d = selectedDate;
-                  const formatted = `${String(d.getDate()).padStart(2, "0")}/${String(
-                    d.getMonth() + 1
-                  ).padStart(2, "0")}/${d.getFullYear()}`;
-                  setData(formatted);
-                }
-              }}
-            />
-          )}
-        </>
-      )}
-
-      <Text style={styles.label}>Sentido de:</Text>
-      <TextInput
-        style={styles.input}
-        value={sentidoDe}
-        onChangeText={setSentidoDe}
-        placeholder="Sentido de"
-      />
-
-      <Text style={styles.label}>Sentido para:</Text>
-      <TextInput
-        style={styles.input}
-        value={sentidoPara}
-        onChangeText={setSentidoPara}
-        placeholder="Sentido para"
-      />
-
-      <Pressable
-        style={{
-          ...styles.button,
-          backgroundColor: "#021b36ff",
-        }}
-        onPress={salvarConfiguracao}
-      >
-        <Text style={styles.buttonText}>Salvar</Text>
-      </Pressable>
-
-      <Pressable
-        style={{
-          ...styles.button,
-          backgroundColor: "#072531a4",
-        }}
-        onPress={() => {
-          if (typeof window !== 'undefined' && window.history) {
-            window.history.back();
-          } else {
-            // fallback para mobile
-            Alert.alert('Voltar', 'Função de voltar não disponível nesta plataforma.');
-          }
-        }}
-      >
-        <Text style={styles.buttonText}>Voltar</Text>
-      </Pressable>
-
-      {/* Modal de resumo */}
+    <View style={{ flex: 1 }}>
+      {/* Modal de senha para liberar acesso */}
       <Modal
-        visible={showResumo}
+        visible={showSenhaModal}
         transparent
         animationType="fade"
-        onRequestClose={() => setShowResumo(false)}
+        onRequestClose={() => {}}
       >
         <View style={modalStyles.overlay}>
           <View style={modalStyles.card}>
-            <Text style={modalStyles.title}>Resumo da Configuração</Text>
-            <Text style={modalStyles.label}>
-              Rodovia:{" "}
-              <Text style={modalStyles.value}>{rodovia}</Text>
-            </Text>
-            <Text style={modalStyles.label}>
-              Posto: <Text style={modalStyles.value}>{posto}</Text>
-            </Text>
-            <Text style={modalStyles.label}>
-              Data: <Text style={modalStyles.value}>{data}</Text>
-            </Text>
-            <Text style={modalStyles.label}>
-              Sentido de:{" "}
-              <Text style={modalStyles.value}>{sentidoDe}</Text>
-            </Text>
-            <Text style={modalStyles.label}>
-              Sentido para:{" "}
-              <Text style={modalStyles.value}>{sentidoPara}</Text>
-            </Text>
+            <Text style={modalStyles.title}>Digite a senha para acessar</Text>
+            <TextInput
+              style={styles.input}
+              value={senhaDigitada}
+              onChangeText={setSenhaDigitada}
+              placeholder="Senha"
+              secureTextEntry
+              autoFocus
+            />
+            {erroSenha ? (
+              <Text style={{ color: "red", marginBottom: 8 }}>{erroSenha}</Text>
+            ) : null}
             <View style={{ flexDirection: "row", marginTop: 24, gap: 12 }}>
               <TouchableOpacity
-                style={[styles.button, { backgroundColor: "#072531a4", flex: 1 }]}
-                onPress={() => setShowResumo(false)}
-              >
-                <Text style={styles.buttonText}>Alterar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
                 style={[styles.button, { backgroundColor: "#021b36ff", flex: 1 }]}
-                onPress={() => setShowResumo(false)}
+                onPress={validarSenha}
               >
-                <Text style={styles.buttonText}>Confirmar</Text>
+                <Text style={styles.buttonText}>Entrar</Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
-    </ScrollView>
+
+      {/* Só mostra o conteúdo se o acesso estiver liberado */}
+      {acessoLiberado && (
+        <ScrollView contentContainerStyle={styles.container}>
+          <Text style={styles.title}>Configurar Pesquisa</Text>
+
+          <Text style={styles.label}>Rodovia:</Text>
+          <TextInput
+            style={styles.input}
+            value={rodovia}
+            onChangeText={setRodovia}
+            placeholder="Digite a rodovia"
+          />
+
+          <Text style={styles.label}>Posto:</Text>
+          <TextInput
+            style={styles.input}
+            value={posto}
+            onChangeText={setPosto}
+            placeholder="Digite o posto"
+          />
+
+          <Text style={styles.label}>Data:</Text>
+          {Platform.OS === "web" ? (
+            <input
+              type="date"
+              style={{
+                ...styles.input,
+                padding: 8,
+                fontSize: 16,
+                borderRadius: 8,
+                border: "1px solid #ccc",
+                marginBottom: 16,
+                backgroundColor: "#f9f9f9",
+              }}
+              value={
+                data
+                  ? `${data.split("/")[2]}-${data.split("/")[1].padStart(2, "0")}-${data
+                      .split("/")[0]
+                      .padStart(2, "0")}`
+                  : ""
+              }
+              onChange={e => {
+                const [year, month, day] = e.target.value.split("-");
+                setData(`${day}/${month}/${year}`);
+              }}
+            />
+          ) : (
+            <>
+              <Pressable onPress={() => setShowDatePicker(true)}>
+                <TextInput
+                  style={styles.input}
+                  value={data}
+                  placeholder="Selecione a data"
+                  editable={false}
+                  pointerEvents="none"
+                />
+              </Pressable>
+              {showDatePicker && (
+                <DateTimePicker
+                  value={data ? new Date(data.split("/").reverse().join("-")) : new Date()}
+                  mode="date"
+                  display="default"
+                  onChange={(_, selectedDate) => {
+                    setShowDatePicker(false);
+                    if (selectedDate) {
+                      const d = selectedDate;
+                      const formatted = `${String(d.getDate()).padStart(2, "0")}/${String(
+                        d.getMonth() + 1
+                      ).padStart(2, "0")}/${d.getFullYear()}`;
+                      setData(formatted);
+                    }
+                  }}
+                />
+              )}
+            </>
+          )}
+
+          <Text style={styles.label}>Sentido de:</Text>
+          <TextInput
+            style={styles.input}
+            value={sentidoDe}
+            onChangeText={setSentidoDe}
+            placeholder="Sentido de"
+          />
+
+          <Text style={styles.label}>Sentido para:</Text>
+          <TextInput
+            style={styles.input}
+            value={sentidoPara}
+            onChangeText={setSentidoPara}
+            placeholder="Sentido para"
+          />
+
+          <Pressable
+            style={{
+              ...styles.button,
+              backgroundColor: "#021b36ff",
+            }}
+            onPress={salvarConfiguracao}
+          >
+            <Text style={styles.buttonText}>Salvar</Text>
+          </Pressable>
+
+          <Pressable
+            style={{
+              ...styles.button,
+              backgroundColor: "#072531a4",
+            }}
+            onPress={() => {
+              if (typeof window !== 'undefined' && window.history) {
+                window.history.back();
+              } else {
+                Alert.alert('Voltar', 'Função de voltar não disponível nesta plataforma.');
+              }
+            }}
+          >
+            <Text style={styles.buttonText}>Voltar</Text>
+          </Pressable>
+
+          {/* Modal de resumo */}
+          <Modal
+            visible={showResumo}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setShowResumo(false)}
+          >
+            <View style={modalStyles.overlay}>
+              <View style={modalStyles.card}>
+                <Text style={modalStyles.title}>Resumo da Configuração</Text>
+                <Text style={modalStyles.label}>
+                  Rodovia:{" "}
+                  <Text style={modalStyles.value}>{rodovia}</Text>
+                </Text>
+                <Text style={modalStyles.label}>
+                  Posto: <Text style={modalStyles.value}>{posto}</Text>
+                </Text>
+                <Text style={modalStyles.label}>
+                  Data: <Text style={modalStyles.value}>{data}</Text>
+                </Text>
+                <Text style={modalStyles.label}>
+                  Sentido de:{" "}
+                  <Text style={modalStyles.value}>{sentidoDe}</Text>
+                </Text>
+                <Text style={modalStyles.label}>
+                  Sentido para:{" "}
+                  <Text style={modalStyles.value}>{sentidoPara}</Text>
+                </Text>
+                <View style={{ flexDirection: "row", marginTop: 24, gap: 12 }}>
+                  <TouchableOpacity
+                    style={[styles.button, { backgroundColor: "#072531a4", flex: 1 }]}
+                    onPress={() => setShowResumo(false)}
+                  >
+                    <Text style={styles.buttonText}>Alterar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.button, { backgroundColor: "#021b36ff", flex: 1 }]}
+                    onPress={() => setShowResumo(false)}
+                  >
+                    <Text style={styles.buttonText}>Confirmar</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </Modal>
+        </ScrollView>
+      )}
+    </View>
   );
 }
 

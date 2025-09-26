@@ -6,28 +6,29 @@ import { Alert, Button, Image, ScrollView, StyleSheet, Text, TextInput, Touchabl
 import estadosCidades from "../../assets/estados-cidades.json";
 
 const classesCaminhao = [
-  { nome: "2C", imagem: require("../../assets/images/2c.png") },
-  { nome: "3C", imagem: require("../../assets/images/3c.png") },
-  { nome: "4CD", imagem: require("../../assets/images/4cd.png") },
-  { nome: "2C2", imagem: require("../../assets/images/2c2.png") },
-  { nome: "2C3", imagem: require("../../assets/images/2c3.png") },
-  { nome: "3C2", imagem: require("../../assets/images/3c2.png") },
-  { nome: "3C3", imagem: require("../../assets/images/3c3.png") },
-  { nome: "BITREM 3S2S2", imagem: require("../../assets/images/3s2s2.png") },
-  { nome: "RODOTREM 3S2C4", imagem: require("../../assets/images/3s2c4.png") },
-  { nome: "TRITREM 3S2S2S2", imagem: require("../../assets/images/3s2s2s2.png") },
-  { nome: "3M6", imagem: require("../../assets/images/3m6.png") },
-  { nome: "2S1", imagem: require("../../assets/images/2s1.png") },
-  { nome: "2S2", imagem: require("../../assets/images/2s2.png") },
-  { nome: "2S3", imagem: require("../../assets/images/2s3.png") },
-  { nome: "3S2", imagem: require("../../assets/images/3s2.png") },
-  { nome: "3S3", imagem: require("../../assets/images/3s3.png") },
-  { nome: "2I2", imagem: require("../../assets/images/2i2.png") },
-  { nome: "2I3", imagem: require("../../assets/images/2i3.png") },
-  { nome: "3I2", imagem: require("../../assets/images/3i2.png") },
-  { nome: "3I3", imagem: require("../../assets/images/3i3.png") },
-  { nome: "2J3", imagem: require("../../assets/images/2j3.png") },
-  { nome: "3J3", imagem: require("../../assets/images/3j3.png") }
+  { nome: "2C (2 eixos)", imagem: require("../../assets/images/2c.png") },
+  { nome: "3C (3 eixos)", imagem: require("../../assets/images/3c.png") },
+  { nome: "2S1 (3 eixos)", imagem: require("../../assets/images/2s1.png") },
+  { nome: "4CD (4 eixos)", imagem: require("../../assets/images/4cd.png") },
+  { nome: "2C2 (4 eixos)", imagem: require("../../assets/images/2c2.png") },
+  { nome: "2S2 (4 eixos)", imagem: require("../../assets/images/2s2.png") },
+  { nome: "2I2 (4 eixos)", imagem: require("../../assets/images/2i2.png") }, 
+  { nome: "2C3 (5 eixos)", imagem: require("../../assets/images/2c3.png") },
+  { nome: "3C2 (5 eixos)", imagem: require("../../assets/images/3c2.png") },
+  { nome: "2S3 (5 eixos)", imagem: require("../../assets/images/2s3.png") },
+  { nome: "3S2 (5 eixos)", imagem: require("../../assets/images/3s2.png") },
+  { nome: "2I3 (5 eixos)", imagem: require("../../assets/images/2i3.png") },
+  { nome: "3I2 (5 eixos)", imagem: require("../../assets/images/3i2.png") },
+  { nome: "2J3 (5 eixos)", imagem: require("../../assets/images/2j3.png") },  
+  { nome: "3C3 (6 eixos)", imagem: require("../../assets/images/3c3.png") },
+  { nome: "3J3 (6 eixos)", imagem: require("../../assets/images/3j3.png") },
+  { nome: "3I3 (6 eixos)", imagem: require("../../assets/images/3i3.png") },
+  { nome: "3S3 (6 eixos)", imagem: require("../../assets/images/3s3.png") },
+  { nome: "BITREM 3S2S2 (7 eixos)", imagem: require("../../assets/images/3s2s2.png") },
+  { nome: "RODOTREM 3S2C4 (9 eixos)", imagem: require("../../assets/images/3s2c4.png") },
+  { nome: "TRITREM 3S2S2S2 (9 eixos)", imagem: require("../../assets/images/3s2s2s2.png") },
+  { nome: "3M6 (9 eixos)", imagem: require("../../assets/images/3m6.png") },
+
 ];
 const frequencias = ["Diária", "Semanal", "Mensal", "Eventual"];
 const rendas = [
@@ -198,8 +199,8 @@ export default function Pesquisa() {
                   <Image
                     source={classe.imagem}
                     style={{
-                      width: 80,
-                      height: 80,
+                      width: 120,
+                      height: 120,
                       resizeMode: "contain",
                       marginLeft: 8
                     }}
@@ -679,7 +680,7 @@ export default function Pesquisa() {
                 {tipo.imagem && (
                   <Image
                     source={tipo.imagem}
-                    style={{ width: 80, height: 80, resizeMode: "contain", marginLeft: 8 }}
+                    style={{ width: 120, height: 120, resizeMode: "contain", marginLeft: 8 }}
                   />
                 )}
               </TouchableOpacity>
@@ -896,8 +897,8 @@ const  styles = StyleSheet.create({
     backgroundColor: "#e0f0ff",
   },
   tipoVeiculoImagem: {
-  width: 32,
-  height: 32,
+  width: 64,
+  height: 64,
   marginBottom: 2,
   },
   tipoVeiculoTexto: {
