@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
@@ -18,6 +19,7 @@ import {
 const SENHA_FIXA = "@trafego25";
 
 export default function ConfiguracaoScreen() {
+  const router = useRouter();
   const [rodovia, setRodovia] = useState("");
   const [posto, setPosto] = useState("");
   const [data, setData] = useState("");
@@ -30,7 +32,7 @@ export default function ConfiguracaoScreen() {
   const [acessoLiberado, setAcessoLiberado] = useState(false);
   const [senhaDigitada, setSenhaDigitada] = useState("");
   const [showSenhaModal, setShowSenhaModal] = useState(true);
-  const [erroSenha, setErroSenha] = useState(""); // NOVO ESTADO
+  const [erroSenha, setErroSenha] = useState(""); 
 
   useEffect(() => {
     setShowSenhaModal(true);
@@ -44,7 +46,7 @@ export default function ConfiguracaoScreen() {
       setSenhaDigitada("");
       setErroSenha("");
     } else {
-      setErroSenha("Senha incorreta"); // Mostra mensagem no modal
+      setErroSenha("Senha incorreta"); 
       setSenhaDigitada("");
     }
   }
@@ -56,6 +58,7 @@ export default function ConfiguracaoScreen() {
       await AsyncStorage.setItem("respostasFixas", JSON.stringify(respostasFixas));
       await AsyncStorage.setItem("senhaRestricao", SENHA_FIXA);
       setShowResumo(true);
+      router.replace('/');
     } catch (e) {
       Alert.alert("Erro", "Não foi possível salvar a configuração.");
     }

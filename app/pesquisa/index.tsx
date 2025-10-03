@@ -106,6 +106,24 @@ const maxOcupantesPorTipo = {
   Utilitario: 20,
 };
 
+async function enviarPesquisaServidor(dados) {
+  try {
+    // Troque pelo IP do seu computador na rede
+    const resposta = await fetch('http://192.168.0.126:3001/pesquisas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dados),
+    });
+    if (resposta.ok) {
+      // Pesquisa enviada com sucesso
+    } else {
+      Alert.alert('Erro ao enviar pesquisa para o servidor');
+    }
+  } catch (e) {
+    Alert.alert('Erro de conexão com o servidor');
+  }
+}
+
 export default function Pesquisa() {
   const { tipo } = useLocalSearchParams();
   const tipoParam = Array.isArray(tipo) ? tipo[0] : tipo;
@@ -234,6 +252,9 @@ export default function Pesquisa() {
     const cidadesOrigem = getCidadesPorUf(origemUf);
     const cidadesDestino = getCidadesPorUf(destinoUf);
     const classeSelecionadaObj = classesCaminhao.find(c => c.nome === classeCaminhao);
+    const chaveClasse = Object.keys(eixosPorClasse).find((chave) =>
+      classeCaminhao.startsWith(chave)
+    );
     return (
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.title}>Pesquisa OD - Caminhão</Text>
@@ -333,9 +354,9 @@ export default function Pesquisa() {
           onValueChange={setEixosSuspenso}
           style={styles.input}
         >
-            {(eixosPorClasse[classeCaminhao] || ["0"]).map((item) => (
+          {(eixosPorClasse[chaveClasse] || ["0"]).map((item) => (
             <Picker.Item key={item} label={item} value={item} />
-            ))}
+          ))}
         </Picker>
 
         <Text style={styles.label}>Mercadoria:</Text>
@@ -437,6 +458,7 @@ export default function Pesquisa() {
                   data: new Date().toLocaleString()
                 };
                 salvarPesquisaLocal(dados);
+                enviarPesquisaServidor(dados); // <-- envia para o servidor
                 if (typeof window !== 'undefined') {
                   window.alert('Pesquisa Salva!');
                 } else {
@@ -644,6 +666,7 @@ export default function Pesquisa() {
                   data: new Date().toLocaleString()
                 };
                 salvarPesquisaLocal(dados);
+                enviarPesquisaServidor(dados);
                 if (typeof window !== 'undefined') {
                   window.alert('Pesquisa Salva!');
                 } else {
@@ -821,6 +844,7 @@ export default function Pesquisa() {
                   data: new Date().toLocaleString()
                 };
                 salvarPesquisaLocal(dados);
+                enviarPesquisaServidor(dados);
                 if (typeof window !== 'undefined') {
                   window.alert('Pesquisa Salva!');
                 } else {
