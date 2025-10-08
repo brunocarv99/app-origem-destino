@@ -109,7 +109,7 @@ const maxOcupantesPorTipo = {
 async function enviarPesquisaServidor(dados) {
   try {
     // Troque pelo IP do seu computador na rede
-    const resposta = await fetch('http://192.168.0.126:3001/pesquisas', {
+    const resposta = await fetch('https://backend-app-pgrx.onrender.com/pesquisas', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(dados),
@@ -256,7 +256,7 @@ export default function Pesquisa() {
       classeCaminhao.startsWith(chave)
     );
     return (
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView contentContainerStyle={[styles.container, { paddingBottom: 48 }]}>
         <Text style={styles.title}>Pesquisa OD - Caminhão</Text>
         <Text style={styles.label}>Classe selecionada:</Text>
         <Text style={styles.tipoVeiculoSelecionado}>{classeCaminhao}</Text>
@@ -300,6 +300,7 @@ export default function Pesquisa() {
           value={origemBairro}
           onChangeText={setOrigemBairro}
           placeholder="Digite o bairro"
+          placeholderTextColor="#222" // <-- cor escura para dica
         />
 
         <Text style={styles.label}>Destino - UF:</Text>
@@ -335,6 +336,7 @@ export default function Pesquisa() {
           value={destinoBairro}
           onChangeText={setDestinoBairro}
           placeholder="Digite o bairro"
+          placeholderTextColor="#222" // <-- cor escura para dica
         />
 
         <Text style={styles.label}>Frequência de viagem:</Text>
@@ -377,6 +379,7 @@ export default function Pesquisa() {
           onChangeText={setPesoBruto}
           placeholder="Ex: 20"
           keyboardType="numeric"
+          placeholderTextColor="#222" // <-- cor escura para dica
         />
 
         <Text style={styles.label}>Tara (toneladas):</Text>
@@ -386,6 +389,7 @@ export default function Pesquisa() {
           onChangeText={setTara}
           placeholder="Ex: 8"
           keyboardType="numeric"
+          placeholderTextColor="#222" // <-- cor escura para dica
         />
 
         <Text style={styles.label}>Capacidade (toneladas):</Text>
@@ -395,6 +399,7 @@ export default function Pesquisa() {
           onChangeText={setCapacidade}
           placeholder="Ex: 12"
           keyboardType="numeric"
+          placeholderTextColor="#222" // <-- cor escura para dica
         />
 
         <Text style={styles.label}>Vazio:</Text>
@@ -523,7 +528,7 @@ export default function Pesquisa() {
     const maxOcupantes = maxOcupantesPorTipo[tipoVeiculo] || 7;
     const ocupantesOptions = Array.from({ length: maxOcupantes }, (_, i) => String(i + 1));
     return (
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView contentContainerStyle={[styles.container, { paddingBottom: 48 }]}>
         <Text style={styles.title}>Pesquisa OD - {tipoVeiculo}</Text>
         <Text style={styles.label}>Tipo de veículo selecionado:</Text>
         <Text style={styles.tipoVeiculoSelecionado}>{tipoVeiculo}</Text>
@@ -561,6 +566,7 @@ export default function Pesquisa() {
           value={origemBairro}
           onChangeText={setOrigemBairro}
           placeholder="Digite o bairro"
+          placeholderTextColor="#222" // <-- cor escura para dica
         />
 
         <Text style={styles.label}>Destino - UF:</Text>
@@ -596,6 +602,7 @@ export default function Pesquisa() {
           value={destinoBairro}
           onChangeText={setDestinoBairro}
           placeholder="Digite o bairro"
+          placeholderTextColor="#222" // <-- cor escura para dica
         />
 
         <Text style={styles.label}>Ocupação (nº de ocupantes):</Text>
@@ -735,7 +742,7 @@ export default function Pesquisa() {
     const cidadesDestino = getCidadesPorUf(destinoUf);
 
     return (
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView contentContainerStyle={[styles.container, { paddingBottom: 48 }]}>
         <Text style={styles.title}>Pesquisa OD - Ônibus</Text>
         <Text style={styles.label}>Tipo de ônibus selecionado:</Text>
         <Text style={styles.tipoVeiculoSelecionado}>
@@ -775,6 +782,7 @@ export default function Pesquisa() {
           value={origemBairro}
           onChangeText={setOrigemBairro}
           placeholder="Digite o bairro"
+          placeholderTextColor="#222" // <-- cor escura para dica
         />
 
         <Text style={styles.label}>Destino - UF:</Text>
@@ -810,6 +818,7 @@ export default function Pesquisa() {
           value={destinoBairro}
           onChangeText={setDestinoBairro}
           placeholder="Digite o bairro"
+          placeholderTextColor="#222" // <-- cor escura para dica
         />
 
         <Text style={styles.label}>Frequência de viagem:</Text>
@@ -876,30 +885,31 @@ const  styles = StyleSheet.create({
     alignItems: "center",
   },
   title: {
-    fontSize: 18,
+    fontSize: 26, // aumente aqui
     fontWeight: "bold",
-    marginBottom: 16,
+    marginBottom: 18,
     textAlign: "center",
   },
   label: {
-    fontSize: 14,
-    marginBottom: 2,
+    fontSize: 20, // aumente aqui
+    marginBottom: 4,
     fontWeight: "bold",
     alignSelf: "flex-start",
     marginLeft: "5%",
   },
   input: {
     borderWidth: 1,
-    borderColor: "#ccc",
+    borderColor: "#021b36",
     borderRadius: 8,
-    padding: 8,
-    marginBottom: 10,
-    fontSize: 14,
-    backgroundColor: "#f9f9f9",
+    padding: 10,
+    marginBottom: 12,
+    fontSize: 22, // <-- aumente aqui (ex: 22 ou 24)
+    backgroundColor: "#e6ecf2",
     width: "90%",
     minWidth: 200,
     maxWidth: 400,
     alignSelf: "center",
+    color: "#222",
   },
   tipoVeiculoRow: {
     flexDirection: "row",
@@ -926,14 +936,14 @@ const  styles = StyleSheet.create({
   marginBottom: 2,
   },
   tipoVeiculoTexto: {
-    fontSize: 14,
+    fontSize: 16, // maior
     fontWeight: "bold",
   },
   tipoVeiculoSelecionado: {
-    fontSize: 16,
+    fontSize: 18, // maior
     fontWeight: "bold",
     color: "#021b36ff",
-    marginBottom: 10,
+    marginBottom: 12,
     alignSelf: "center",
   },
 });

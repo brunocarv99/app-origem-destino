@@ -58,7 +58,7 @@ export default function ConfiguracaoScreen() {
       await AsyncStorage.setItem("respostasFixas", JSON.stringify(respostasFixas));
       await AsyncStorage.setItem("senhaRestricao", SENHA_FIXA);
       setShowResumo(true);
-      router.replace('/');
+      router.replace('/'); // Volta para tela inicial
     } catch (e) {
       Alert.alert("Erro", "Não foi possível salvar a configuração.");
     }
@@ -141,6 +141,16 @@ export default function ConfiguracaoScreen() {
                 onPress={validarSenha}
               >
                 <Text style={styles.buttonText}>Entrar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: "#888", flex: 1 }]}
+                onPress={() => {
+                  setShowSenhaModal(false);
+                  setSenhaDigitada("");
+                  setErroSenha("");
+                }}
+              >
+                <Text style={styles.buttonText}>Voltar</Text>
               </TouchableOpacity>
             </View>
           </View>
