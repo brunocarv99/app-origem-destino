@@ -34,6 +34,8 @@ export default function ConfiguracaoScreen() {
   const [showSenhaModal, setShowSenhaModal] = useState(true);
   const [erroSenha, setErroSenha] = useState(""); 
 
+  const [perguntarBairro, setPerguntarBairro] = useState(true); // padrão: sim
+
   useEffect(() => {
     setShowSenhaModal(true);
     setAcessoLiberado(false);
@@ -53,7 +55,7 @@ export default function ConfiguracaoScreen() {
 
   async function salvarConfiguracao() {
     try {
-      const respostasFixas = { rodovia, posto, data, sentidoDe, sentidoPara };
+      const respostasFixas = { rodovia, posto, data, sentidoDe, sentidoPara, perguntarBairro };
       await AsyncStorage.setItem("configuracaoPesquisa", JSON.stringify(respostasFixas));
       await AsyncStorage.setItem("respostasFixas", JSON.stringify(respostasFixas));
       await AsyncStorage.setItem("senhaRestricao", SENHA_FIXA);
@@ -74,7 +76,7 @@ export default function ConfiguracaoScreen() {
       const pesquisaCompleta = {
         ...respostasPesquisa,
         respostasFixas,
-        data: new Date().toISOString(),
+        data: new Date(), 
       };
 
       // Salva no AsyncStorage (exemplo para lista de pesquisas)
@@ -95,10 +97,14 @@ export default function ConfiguracaoScreen() {
       const respostasFixasStr = await AsyncStorage.getItem('respostasFixas');
       const respostasFixas = respostasFixasStr ? JSON.parse(respostasFixasStr) : {};
 
-      // Junta respostas fixas como campos individuais
+      // Remova o campo data das respostas fixas
+      const { data, ...respostasFixasSemData } = respostasFixas;
+
+      // Junta respostas fixas como campos individuais, sem sobrescrever o data correto
       const dadosComFixas = {
         ...dados,
-        ...respostasFixas, // cada campo será incluído diretamente
+        ...respostasFixasSemData,
+        data: new Date(), // VOLTA PARA OBJETO Date
       };
 
       // Recupera pesquisas já salvas (array) ou inicia um novo
@@ -249,6 +255,28 @@ export default function ConfiguracaoScreen() {
             onChangeText={setSentidoPara}
             placeholder="Sentido para"
           />
+
+          <Text style={styles.label}>Perguntar bairro de origem e destino?</Text>
+          <View style={{ flexDirection: "row", marginBottom: 16 }}>
+            <TouchableOpacity
+              style={[
+                styles.button,
+                { backgroundColor: perguntarBairro ? "#021b36ff" : "#888", marginRight: 8 },
+              ]}
+              onPress={() => setPerguntarBairro(true)}
+            >
+              <Text style={styles.buttonText}>Sim</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.button,
+                { backgroundColor: !perguntarBairro ? "#021b36ff" : "#888" },
+              ]}
+              onPress={() => setPerguntarBairro(false)}
+            >
+              <Text style={styles.buttonText}>Não</Text>
+            </TouchableOpacity>
+          </View>
 
           <Pressable
             style={{

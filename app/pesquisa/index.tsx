@@ -1,9 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import NetInfo from "@react-native-community/netinfo";
 import { Picker } from "@react-native-picker/picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert, Button, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import estadosCidades from "../../assets/estados-cidades.json";
+import DropDownPicker from 'react-native-dropdown-picker';
 
 const classesCaminhao = [
   { nome: "2C (2 eixos)", imagem: require("../../assets/images/2c.png") },
@@ -76,29 +78,62 @@ const tiposOnibus = [
 ];
 
 const eixosPorClasse = {
-  "2C": ["0"],
-  "3C": ["0", "1"],
-  "2S1": ["0", "1"],
-  "2S2": ["0", "1", "2"],
-  "4CD": ["0", "1", "2"],
-  "2C2": ["0", "1", "2"],
-  "2I2": ["0", "1", "2"],
-  "2C3": ["0", "1", "2", "3"],
-  "2I3": ["0", "1", "2", "3"],
-  "2S3": ["0", "1", "2", "3"],
-  "2J3": ["0", "1", "2", "3"],
-  "3S2": ["0", "1", "2", "3"],
-  "3I2": ["0", "1", "2", "3"],
-  "3C2": ["0", "1", "2", "3"],
-  "3C3": ["0", "1", "2", "3", "4"],
-  "3J3": ["0", "1", "2", "3", "4"],
-  "3I3": ["0", "1", "2", "3", "4"],
-  "3S3": ["0", "1", "2", "3", "4"],
+  "2C (2 eixos)": ["0"],
+  "3C (3 eixos)": ["0", "1"],
+  "2S1 (3 eixos)": ["0", "1"],
+  "2S2 (4 eixos)": ["0", "1", "2"],
+  "4CD (4 eixos)": ["0", "1", "2"],
+  "2C2 (4 eixos)": ["0", "1", "2"],
+  "2C3 (5 eixos)": ["0", "1", "2", "3"],
+  "2I2 (4 eixos)": ["0", "1", "2"],
+  "2I3 (5 eixos)": ["0", "1", "2", "3"],
+  "2S3 (5 eixos)": ["0", "1", "2", "3"],
+  "2J3 (5 eixos)": ["0", "1", "2", "3"],
+  "3S2 (5 eixos)": ["0", "1", "2", "3"],
+  "3I2 (5 eixos)": ["0", "1", "2", "3"],
+  "3C2 (5 eixos)": ["0", "1", "2", "3"],
+  "3C3 (6 eixos)": ["0", "1", "2", "3", "4"],
+  "3J3 (6 eixos)": ["0", "1", "2", "3", "4"],
+  "3I3 (6 eixos)": ["0", "1", "2", "3", "4"],
+  "3S3 (6 eixos)": ["0", "1", "2", "3", "4"],
   "BITREM 3S2S2": ["0", "1", "2", "3", "4", "5"],
   "RODOTREM 3S2C4": ["0", "1", "2", "3", "4", "5", "6", "7"],
   "TRITREM 3S2S2S2": ["0", "1", "2", "3", "4", "5", "6", "7"],
   "3M6": ["0", "1", "2", "3", "4", "5", "6", "7"],
 };
+
+// Limites por classe (em toneladas)
+const limitesPorClasse = {
+  "2C (2 eixos)": { pbt: [7, 27], capacidade: [3, 10] },
+  "3C (3 eixos)": { pbt: [15, 35], capacidade: [10, 19] },
+  "2S1 (3 eixos)": { pbt: [18, 38], capacidade: [10, 19] },
+  "4CD (4 eixos)": { pbt: [21, 41], capacidade: [13, 21] },
+  "2C2 (4 eixos)": { pbt: [28, 48], capacidade: [13, 32] },
+  "2S2 (4 eixos)": { pbt: [25, 45], capacidade: [13, 32] },
+  "2I2 (4 eixos)": { pbt: [28, 48], capacidade: [13, 32] },
+  "2C3 (5 eixos)": { pbt: [31, 61], capacidade: [18, 42] },
+  "3C2 (5 eixos)": { pbt: [31, 61], capacidade: [18, 42] },
+  "2S3 (5 eixos)": { pbt: [29, 59], capacidade: [18, 42] },
+  "3S2 (5 eixos)": { pbt: [31, 61], capacidade: [18, 42] },
+  "2I3 (5 eixos)": { pbt: [31, 61], capacidade: [18, 42] },
+  "3I2 (5 eixos)": { pbt: [31, 61], capacidade: [18, 42] },
+  "2J3 (5 eixos)": { pbt: [31, 61], capacidade: [18, 42] },
+  "3C3 (6 eixos)": { pbt: [38, 68], capacidade: [24, 47] },
+  "3J3 (6 eixos)": { pbt: [38, 68], capacidade: [24, 47] },
+  "3I3 (6 eixos)": { pbt: [41, 71], capacidade: [24, 47] },
+  "3S3 (6 eixos)": { pbt: [36, 66], capacidade: [24, 47] },
+  "BITREM 3S2S2 (7 eixos)": { pbt: [45, 75], capacidade: [25, 52] },
+  "RODOTREM 3S2C4 (9 eixos)": { pbt: [45, 75], capacidade: [26, 70] },
+  "TRITREM 3S2S2S2 (9 eixos)": { pbt: [63, 93], capacidade: [26, 70] },
+  "3M6 (9 eixos)": { pbt: [63, 93], capacidade: [26, 70] },
+};
+function getLimitesTara(classe) {
+  const { pbt, capacidade } = limitesPorClasse[classe] || {};
+  if (!pbt || !capacidade) return [0, 0];
+  const taraMin = pbt[0]; // Tara mínima = PBT mínimo (capacidade zero)
+  const taraMax = pbt[1] - capacidade[0]; // Tara máxima = PBT máximo - Capacidade mínima
+  return [taraMin, taraMax];
+}
 
 const maxOcupantesPorTipo = {
   Moto: 2,
@@ -106,21 +141,55 @@ const maxOcupantesPorTipo = {
   Utilitario: 20,
 };
 
-async function enviarPesquisaServidor(dados) {
+async function enviarPesquisaServidor(pesquisa) {
   try {
-    // Troque pelo IP do seu computador na rede
     const resposta = await fetch('https://backend-app-pgrx.onrender.com/pesquisas', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(dados),
+      body: JSON.stringify(pesquisa),
     });
     if (resposta.ok) {
-      // Pesquisa enviada com sucesso
+      // Marcar como enviada no AsyncStorage
+      const pesquisasSalvas = await AsyncStorage.getItem('pesquisas');
+      let pesquisas = pesquisasSalvas ? JSON.parse(pesquisasSalvas) : [];
+      pesquisas = pesquisas.map(p =>
+        // Aqui compara por data e, se quiser, por outros campos únicos
+        p.data === pesquisa.data ? { ...p, enviada: true } : p
+      );
+      await AsyncStorage.setItem('pesquisas', JSON.stringify(pesquisas));
     } else {
       Alert.alert('Erro ao enviar pesquisa para o servidor');
     }
   } catch (e) {
     Alert.alert('Erro de conexão com o servidor');
+  }
+}
+
+// Função para sincronizar pesquisas pendentes
+async function sincronizarPesquisasPendentes() {
+  const pesquisasSalvas = await AsyncStorage.getItem('pesquisas');
+  const pesquisas = pesquisasSalvas ? JSON.parse(pesquisasSalvas) : [];
+  if (pesquisas.length === 0) return;
+
+  let enviadas = [];
+  for (const dados of pesquisas) {
+    try {
+      const resposta = await fetch('https://backend-app-pgrx.onrender.com/pesquisas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dados),
+      });
+      if (resposta.ok) {
+        enviadas.push(dados);
+      }
+    } catch (e) {
+      // Se não conseguir enviar, mantém no array
+    }
+  }
+  // Remove as pesquisas que foram enviadas com sucesso
+  if (enviadas.length > 0) {
+    const restantes = pesquisas.filter(p => !enviadas.includes(p));
+    await AsyncStorage.setItem('pesquisas', JSON.stringify(restantes));
   }
 }
 
@@ -157,25 +226,64 @@ export default function Pesquisa() {
   // Comuns para ambos
   const [rendaFamiliar, setRendaFamiliar] = useState(rendas[0]);
   const [motivoViagem, setMotivoViagem] = useState(motivosViagem[0]);
+  const [motivoViagemOutro, setMotivoViagemOutro] = useState("");
+  const [mercadoriaOutro, setMercadoriaOutro] = useState(""); // só caminhão
+  // Novo estado para controlar a exibição dos campos de bairro
+  const [perguntarBairro, setPerguntarBairro] = useState(true);
+  const [cidadeBuscaOrigem, setCidadeBuscaOrigem] = useState("");
+  const [cidadeBuscaDestino, setCidadeBuscaDestino] = useState("");
+
+  // Origem
+  const [openOrigem, setOpenOrigem] = useState(false);
+  const [cidadeOrigemValue, setCidadeOrigemValue] = useState(origemCidade);
+  const [cidadesOrigemItems, setCidadesOrigemItems] = useState(
+    getCidadesPorUf(origemUf).map(cidade => ({ label: cidade, value: cidade }))
+  );
+
+  // Destino
+  const [openDestino, setOpenDestino] = useState(false);
+  const [cidadeDestinoValue, setCidadeDestinoValue] = useState(destinoCidade);
+  const [cidadesDestinoItems, setCidadesDestinoItems] = useState(
+    getCidadesPorUf(destinoUf).map(cidade => ({ label: cidade, value: cidade }))
+  );
+
+  useEffect(() => {
+    AsyncStorage.getItem("respostasFixas").then(str => {
+      if (str) {
+        const conf = JSON.parse(str);
+        setPerguntarBairro(conf.perguntarBairro !== false); // padrão: true
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener(state => {
+      if (state.isConnected && state.isInternetReachable) {
+        sincronizarPesquisasPendentes();
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    setCidadesOrigemItems(
+      getCidadesPorUf(origemUf).map(cidade => ({ label: cidade, value: cidade }))
+    );
+    setCidadeOrigemValue("");
+    setOrigemCidade("");
+  }, [origemUf]);
+
+  useEffect(() => {
+    setCidadesDestinoItems(
+      getCidadesPorUf(destinoUf).map(cidade => ({ label: cidade, value: cidade }))
+    );
+    setCidadeDestinoValue("");
+    setDestinoCidade("");
+  }, [destinoUf]);
 
   // Função para salvar pesquisa localmente
-  const salvarPesquisaLocal = async (dados) => {
+  const salvarPesquisaLocal = async (dadosComFixas) => {
     try {
-      // Recupera respostas fixas
-      const respostasFixasStr = await AsyncStorage.getItem('respostasFixas');
-      const respostasFixas = respostasFixasStr ? JSON.parse(respostasFixasStr) : {};
-
-      // Espalha cada campo das respostas fixas no objeto salvo
-      const dadosComFixas = {
-        ...dados,
-        rodovia: respostasFixas.rodovia || '',
-        posto: respostasFixas.posto || '',
-        data: respostasFixas.data || '',
-        sentidoDe: respostasFixas.sentidoDe || '',
-        sentidoPara: respostasFixas.sentidoPara || '',
-      };
-
-      // Recupera pesquisas já salvas (array) ou inicia um novo
       const pesquisasSalvas = await AsyncStorage.getItem('pesquisas');
       const pesquisas = pesquisasSalvas ? JSON.parse(pesquisasSalvas) : [];
       pesquisas.push(dadosComFixas);
@@ -210,7 +318,12 @@ export default function Pesquisa() {
                     padding: 8
                   }
                 ]}
-                onPress={() => setClasseCaminhao(classe.nome)}
+                onPress={() => {
+                  setClasseCaminhao(classe.nome);
+                  const novaChave = getChaveClasse(classe.nome);
+                  const eixos = eixosPorClasse[novaChave] || ["0"];
+                  setEixosSuspenso(eixos[0]);
+                }}
               >
                 <Text style={styles.tipoVeiculoTexto}>{classe.nome}</Text>
                 {classe.imagem && (
@@ -223,7 +336,8 @@ export default function Pesquisa() {
                       marginLeft: 8
                     }}
                   />
-                )}
+                )
+                }
               </TouchableOpacity>
             );
           })}
@@ -252,9 +366,12 @@ export default function Pesquisa() {
     const cidadesOrigem = getCidadesPorUf(origemUf);
     const cidadesDestino = getCidadesPorUf(destinoUf);
     const classeSelecionadaObj = classesCaminhao.find(c => c.nome === classeCaminhao);
-    const chaveClasse = Object.keys(eixosPorClasse).find((chave) =>
-      classeCaminhao.startsWith(chave)
-    );
+    const chaveClasse = getChaveClasse(classeCaminhao);
+
+    // ADICIONE ESTA LINHA:
+    const classeLimites = limitesPorClasse[classeCaminhao];
+    const [taraMin, taraMax] = getLimitesTara(classeCaminhao);
+
     return (
       <ScrollView contentContainerStyle={[styles.container, { paddingBottom: 48 }]}>
         <Text style={styles.title}>Pesquisa OD - Caminhão</Text>
@@ -276,32 +393,45 @@ export default function Pesquisa() {
           }}
           style={styles.input}
         >
-          {ufs.map((uf) => (
-            <Picker.Item key={uf} label={uf} value={uf} />
+          {estadosCidades.estados.map((estado) => (
+            <Picker.Item key={estado.sigla} label={estado.nome} value={estado.sigla} />
           ))}
         </Picker>
 
         <Text style={styles.label}>Origem - Cidade:</Text>
-        <Picker
-          selectedValue={origemCidade}
-          onValueChange={setOrigemCidade}
+        <DropDownPicker
+          open={openOrigem}
+          value={cidadeOrigemValue}
+          items={cidadesOrigemItems}
+          setOpen={setOpenOrigem}
+          setValue={val => {
+            setCidadeOrigemValue(val());
+            setOrigemCidade(val());
+          }}
+          setItems={setCidadesOrigemItems}
+          placeholder="Selecione a cidade"
+          searchable={true}
+          searchPlaceholder="Filtrar cidade..."
           style={styles.input}
-          enabled={!!origemUf}
-        >
-          <Picker.Item label="Selecione a cidade" value="" />
-          {cidadesOrigem.map((cidade) => (
-            <Picker.Item key={cidade} label={cidade} value={cidade} />
-          ))}
-        </Picker>
-
-        <Text style={styles.label}>Origem - Bairro:</Text>
-        <TextInput
-          style={styles.input}
-          value={origemBairro}
-          onChangeText={setOrigemBairro}
-          placeholder="Digite o bairro"
-          placeholderTextColor="#222" // <-- cor escura para dica
+          containerStyle={{ marginBottom: 16, width: '90%', alignSelf: 'center' }}
+          zIndex={2000}
+          textStyle={styles.dropDownText}
+          labelStyle={styles.dropDownText}
         />
+
+        {/* Origem - Bairro */}
+        {perguntarBairro && (
+          <>
+            <Text style={styles.label}>Origem - Bairro:</Text>
+            <TextInput
+              style={styles.input}
+              value={origemBairro}
+              onChangeText={setOrigemBairro}
+              placeholder="Digite o bairro de origem"
+              placeholderTextColor="#222"
+            />
+          </>
+        )}
 
         <Text style={styles.label}>Destino - UF:</Text>
         <Picker
@@ -312,32 +442,45 @@ export default function Pesquisa() {
           }}
           style={styles.input}
         >
-          {ufs.map((uf) => (
-            <Picker.Item key={uf} label={uf} value={uf} />
+          {estadosCidades.estados.map((estado) => (
+            <Picker.Item key={estado.sigla} label={estado.nome} value={estado.sigla} />
           ))}
         </Picker>
 
         <Text style={styles.label}>Destino - Cidade:</Text>
-        <Picker
-          selectedValue={destinoCidade}
-          onValueChange={setDestinoCidade}
+        <DropDownPicker
+          open={openDestino}
+          value={cidadeDestinoValue}
+          items={cidadesDestinoItems}
+          setOpen={setOpenDestino}
+          setValue={val => {
+            setCidadeDestinoValue(val());
+            setDestinoCidade(val());
+          }}
+          setItems={setCidadesDestinoItems}
+          placeholder="Selecione a cidade"
+          searchable={true}
+          searchPlaceholder="Filtrar cidade..."
           style={styles.input}
-          enabled={!!destinoUf}
-        >
-          <Picker.Item label="Selecione a cidade" value="" />
-          {cidadesDestino.map((cidade) => (
-            <Picker.Item key={cidade} label={cidade} value={cidade} />
-          ))}
-        </Picker>
-
-        <Text style={styles.label}>Destino - Bairro:</Text>
-        <TextInput
-          style={styles.input}
-          value={destinoBairro}
-          onChangeText={setDestinoBairro}
-          placeholder="Digite o bairro"
-          placeholderTextColor="#222" // <-- cor escura para dica
+          containerStyle={{ marginBottom: 16, width: '90%', alignSelf: 'center' }}
+          zIndex={1000}
+          textStyle={styles.dropDownText}
+          labelStyle={styles.dropDownText}
         />
+
+        {/* Destino - Bairro */}
+        {perguntarBairro && (
+          <>
+            <Text style={styles.label}>Destino - Bairro:</Text>
+            <TextInput
+              style={styles.input}
+              value={destinoBairro}
+              onChangeText={setDestinoBairro}
+              placeholder="Digite o bairro de destino"
+              placeholderTextColor="#222"
+            />
+          </>
+        )}
 
         <Text style={styles.label}>Frequência de viagem:</Text>
         <Picker
@@ -371,25 +514,24 @@ export default function Pesquisa() {
             <Picker.Item key={item} label={item} value={item} />
           ))}
         </Picker>
+        {mercadoria.startsWith("Outros") && (
+          <TextInput
+            style={styles.input}
+            value={mercadoriaOutro}
+            onChangeText={setMercadoriaOutro}
+            placeholder="Digite a mercadoria"
+            placeholderTextColor="#222"
+          />
+        )}
 
         <Text style={styles.label}>Peso bruto (toneladas):</Text>
         <TextInput
           style={styles.input}
           value={pesoBruto}
           onChangeText={setPesoBruto}
-          placeholder="Ex: 20"
+          placeholder={classeLimites ? `Limite: ${classeLimites.pbt[0]}–${classeLimites.pbt[1]} t` : ""}
           keyboardType="numeric"
-          placeholderTextColor="#222" // <-- cor escura para dica
-        />
-
-        <Text style={styles.label}>Tara (toneladas):</Text>
-        <TextInput
-          style={styles.input}
-          value={tara}
-          onChangeText={setTara}
-          placeholder="Ex: 8"
-          keyboardType="numeric"
-          placeholderTextColor="#222" // <-- cor escura para dica
+          placeholderTextColor="#888"
         />
 
         <Text style={styles.label}>Capacidade (toneladas):</Text>
@@ -397,9 +539,18 @@ export default function Pesquisa() {
           style={styles.input}
           value={capacidade}
           onChangeText={setCapacidade}
-          placeholder="Ex: 12"
+          placeholder={classeLimites ? `Limite: ${classeLimites.capacidade[0]}–${classeLimites.capacidade[1]} t` : ""}
           keyboardType="numeric"
-          placeholderTextColor="#222" // <-- cor escura para dica
+          placeholderTextColor="#888"
+        />
+
+        <Text style={styles.label}>Tara (toneladas):</Text>
+        <TextInput
+          style={styles.input}
+          value={tara}
+          onChangeText={setTara}
+          keyboardType="numeric"
+          placeholderTextColor="#888"
         />
 
         <Text style={styles.label}>Vazio:</Text>
@@ -434,6 +585,15 @@ export default function Pesquisa() {
             <Picker.Item key={item} label={item} value={item} />
           ))}
         </Picker>
+        {motivoViagem.startsWith("Outros") && (
+          <TextInput
+            style={styles.input}
+            value={motivoViagemOutro}
+            onChangeText={setMotivoViagemOutro}
+            placeholder="Digite o motivo"
+            placeholderTextColor="#222"
+          />
+        )}
         <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 24, marginBottom: 8, width: '100%' }}>
           <View style={{ flex: 1 }}>
             <Button title="Voltar" onPress={() => setEtapa(1)} color="#072531a4" />
@@ -442,7 +602,59 @@ export default function Pesquisa() {
             <Button
               title="Salvar Pesquisa"
               color="#021b36ff"
-              onPress={() => {
+              onPress={async () => {
+                // Validação dos campos obrigatórios
+                if (
+                  !origemUf ||
+                  !origemCidade ||
+                  (perguntarBairro && !origemBairro.trim()) ||
+                  !destinoUf ||
+                  !destinoCidade ||
+                  (perguntarBairro && !destinoBairro.trim()) ||
+                  !frequencia ||
+                  !eixosSuspenso ||
+                  !mercadoria ||
+                  (mercadoria.startsWith("Outros") && !mercadoriaOutro.trim()) ||
+                  !pesoBruto ||
+                  !capacidade ||
+                  !vazio ||
+                  !rendaFamiliar ||
+                  !motivoViagem ||
+                  (motivoViagem.startsWith("Outros") && !motivoViagemOutro.trim())
+                ) {
+                  Alert.alert("Preencha todas as perguntas obrigatórias!");
+                  return;
+                }
+
+                // Limites por classe
+                const classeLimites = limitesPorClasse[classeCaminhao];
+                const [taraMin, taraMax] = getLimitesTara(classeCaminhao);
+
+                if (!classeLimites) {
+                  Alert.alert("Classe de caminhão inválida.");
+                  return;
+                }
+                const [pbtMin, pbtMax] = classeLimites.pbt;
+                const [capMin, capMax] = classeLimites.capacidade;
+
+                const pbtNum = Number(pesoBruto);
+                const capacidadeNum = Number(capacidade);
+                const taraCalculada = pbtNum - capacidadeNum;
+
+                if (isNaN(pbtNum) || isNaN(capacidadeNum)) {
+                  Alert.alert("Preencha Peso Bruto e Capacidade com valores numéricos.");
+                  return;
+                }
+                if (pbtNum < pbtMin || pbtNum > pbtMax) {
+                  Alert.alert(`Peso Bruto fora dos limites para a classe selecionada (${pbtMin}–${pbtMax}t).`);
+                  return;
+                }
+                if (capacidadeNum < capMin || capacidadeNum > capMax) {
+                  Alert.alert(`Capacidade fora dos limites para a classe selecionada (${capMin}–${capMax}t).`);
+                  return;
+                }
+               
+                // Monta o objeto para salvar (tara sempre calculada)
                 const dados = {
                   classeCaminhao,
                   origemUf,
@@ -453,17 +665,26 @@ export default function Pesquisa() {
                   destinoBairro,
                   frequencia,
                   eixosSuspenso,
-                  mercadoria,
-                  pesoBruto,
-                  tara,
-                  capacidade,
+                  mercadoria: mercadoria.startsWith("Outros") ? mercadoriaOutro : mercadoria,
+                  pesoBruto: pbtNum,
+                  tara: taraCalculada,
+                  capacidade: capacidadeNum,
                   vazio,
                   rendaFamiliar,
-                  motivoViagem,
-                  data: new Date().toLocaleString()
+                  motivoViagem: motivoViagem.startsWith("Outros") ? motivoViagemOutro : motivoViagem,
+                  data: new Date()
                 };
-                salvarPesquisaLocal(dados);
-                enviarPesquisaServidor(dados); // <-- envia para o servidor
+                // Monte o objeto completo com perguntas fixas
+                const respostasFixasStr = await AsyncStorage.getItem('respostasFixas');
+                const respostasFixas = respostasFixasStr ? JSON.parse(respostasFixasStr) : {};
+                const { data, ...respostasFixasSemData } = respostasFixas;
+                const dadosComFixas = {
+                  ...dados,
+                  ...respostasFixasSemData,
+                  data: new Date()
+                };
+                await salvarPesquisaLocal(dadosComFixas);
+                enviarPesquisaServidor(dadosComFixas); // sem await!
                 if (typeof window !== 'undefined') {
                   window.alert('Pesquisa Salva!');
                 } else {
@@ -542,32 +763,45 @@ export default function Pesquisa() {
           }}
           style={styles.input}
         >
-          {ufs.map((uf) => (
-            <Picker.Item key={uf} label={uf} value={uf} />
+          {estadosCidades.estados.map((estado) => (
+            <Picker.Item key={estado.sigla} label={estado.nome} value={estado.sigla} />
           ))}
         </Picker>
 
         <Text style={styles.label}>Origem - Cidade:</Text>
-        <Picker
-          selectedValue={origemCidade}
-          onValueChange={setOrigemCidade}
+        <DropDownPicker
+          open={openOrigem}
+          value={cidadeOrigemValue}
+          items={cidadesOrigemItems}
+          setOpen={setOpenOrigem}
+          setValue={val => {
+            setCidadeOrigemValue(val());
+            setOrigemCidade(val());
+          }}
+          setItems={setCidadesOrigemItems}
+          placeholder="Selecione a cidade"
+          searchable={true}
+          searchPlaceholder="Filtrar cidade..."
           style={styles.input}
-          enabled={!!origemUf}
-        >
-          <Picker.Item label="Selecione a cidade" value="" />
-          {cidadesOrigem.map((cidade) => (
-            <Picker.Item key={cidade} label={cidade} value={cidade} />
-          ))}
-        </Picker>
-
-        <Text style={styles.label}>Origem - Bairro:</Text>
-        <TextInput
-          style={styles.input}
-          value={origemBairro}
-          onChangeText={setOrigemBairro}
-          placeholder="Digite o bairro"
-          placeholderTextColor="#222" // <-- cor escura para dica
+          containerStyle={{ marginBottom: 16, width: '90%', alignSelf: 'center' }}
+          zIndex={2000}
+          textStyle={styles.dropDownText}
+          labelStyle={styles.dropDownText}
         />
+
+        {/* Origem - Bairro */}
+        {perguntarBairro && (
+          <>
+            <Text style={styles.label}>Origem - Bairro:</Text>
+            <TextInput
+              style={styles.input}
+              value={origemBairro}
+              onChangeText={setOrigemBairro}
+              placeholder="Digite o bairro de origem"
+              placeholderTextColor="#222"
+            />
+          </>
+        )}
 
         <Text style={styles.label}>Destino - UF:</Text>
         <Picker
@@ -578,32 +812,45 @@ export default function Pesquisa() {
           }}
           style={styles.input}
         >
-          {ufs.map((uf) => (
-            <Picker.Item key={uf} label={uf} value={uf} />
+          {estadosCidades.estados.map((estado) => (
+            <Picker.Item key={estado.sigla} label={estado.nome} value={estado.sigla} />
           ))}
         </Picker>
 
         <Text style={styles.label}>Destino - Cidade:</Text>
-        <Picker
-          selectedValue={destinoCidade}
-          onValueChange={setDestinoCidade}
+        <DropDownPicker
+          open={openDestino}
+          value={cidadeDestinoValue}
+          items={cidadesDestinoItems}
+          setOpen={setOpenDestino}
+          setValue={val => {
+            setCidadeDestinoValue(val());
+            setDestinoCidade(val());
+          }}
+          setItems={setCidadesDestinoItems}
+          placeholder="Selecione a cidade"
+          searchable={true}
+          searchPlaceholder="Filtrar cidade..."
           style={styles.input}
-          enabled={!!destinoUf}
-        >
-          <Picker.Item label="Selecione a cidade" value="" />
-          {cidadesDestino.map((cidade) => (
-            <Picker.Item key={cidade} label={cidade} value={cidade} />
-          ))}
-        </Picker>
-
-        <Text style={styles.label}>Destino - Bairro:</Text>
-        <TextInput
-          style={styles.input}
-          value={destinoBairro}
-          onChangeText={setDestinoBairro}
-          placeholder="Digite o bairro"
-          placeholderTextColor="#222" // <-- cor escura para dica
+          containerStyle={{ marginBottom: 16, width: '90%', alignSelf: 'center' }}
+          zIndex={1000}
+          textStyle={styles.dropDownText}
+          labelStyle={styles.dropDownText}
         />
+
+        {/* Destino - Bairro */}
+        {perguntarBairro && (
+          <>
+            <Text style={styles.label}>Destino - Bairro:</Text>
+            <TextInput
+              style={styles.input}
+              value={destinoBairro}
+              onChangeText={setDestinoBairro}
+              placeholder="Digite o bairro de destino"
+              placeholderTextColor="#222"
+            />
+          </>
+        )}
 
         <Text style={styles.label}>Ocupação (nº de ocupantes):</Text>
         <Picker
@@ -648,6 +895,15 @@ export default function Pesquisa() {
             <Picker.Item key={item} label={item} value={item} />
           ))}
         </Picker>
+        {motivoViagem.startsWith("Outros") && (
+          <TextInput
+            style={styles.input}
+            value={motivoViagemOutro}
+            onChangeText={setMotivoViagemOutro}
+            placeholder="Digite o motivo"
+            placeholderTextColor="#222"
+          />
+        )}
 
         <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 24, marginBottom: 8, width: '100%' }}>
           <View style={{ flex: 1 }}>
@@ -657,7 +913,14 @@ export default function Pesquisa() {
             <Button
               title="Salvar Pesquisa"
               color="#021b36ff"
-              onPress={() => {
+              onPress={async () => {
+                // Validação dos campos de bairro
+                if (perguntarBairro) {
+                  if (!origemBairro.trim() || !destinoBairro.trim()) {
+                    Alert.alert("Preencha o bairro de origem e destino!");
+                    return;
+                  }
+                }
                 const dados = {
                   tipoVeiculo,
                   origemUf,
@@ -669,11 +932,20 @@ export default function Pesquisa() {
                   ocupacao,
                   frequencia,
                   rendaFamiliar,
-                  motivoViagem,
-                  data: new Date().toLocaleString()
+                  motivoViagem: motivoViagem.startsWith("Outros") ? motivoViagemOutro : motivoViagem,
+                  data: new Date()
                 };
-                salvarPesquisaLocal(dados);
-                enviarPesquisaServidor(dados);
+                // Monte o objeto completo com perguntas fixas
+                const respostasFixasStr = await AsyncStorage.getItem('respostasFixas');
+                const respostasFixas = respostasFixasStr ? JSON.parse(respostasFixasStr) : {};
+                const { data, ...respostasFixasSemData } = respostasFixas;
+                const dadosComFixas = {
+                  ...dados,
+                  ...respostasFixasSemData,
+                  data: new Date()
+                };
+                await salvarPesquisaLocal(dadosComFixas);
+                enviarPesquisaServidor(dadosComFixas); // sem await!
                 if (typeof window !== 'undefined') {
                   window.alert('Pesquisa Salva!');
                 } else {
@@ -758,32 +1030,45 @@ export default function Pesquisa() {
           }}
           style={styles.input}
         >
-          {ufs.map((uf) => (
-            <Picker.Item key={uf} label={uf} value={uf} />
+          {estadosCidades.estados.map((estado) => (
+            <Picker.Item key={estado.sigla} label={estado.nome} value={estado.sigla} />
           ))}
         </Picker>
 
-        <Text style={styles.label}>Origem - Cidade:</Text>
-        <Picker
-          selectedValue={origemCidade}
-          onValueChange={setOrigemCidade}
+                <Text style={styles.label}>Origem - Cidade:</Text>
+        <DropDownPicker
+          open={openOrigem}
+          value={cidadeOrigemValue}
+          items={cidadesOrigemItems}
+          setOpen={setOpenOrigem}
+          setValue={val => {
+            setCidadeOrigemValue(val());
+            setOrigemCidade(val());
+          }}
+          setItems={setCidadesOrigemItems}
+          placeholder="Selecione a cidade"
+          searchable={true}
+          searchPlaceholder="Filtrar cidade..."
           style={styles.input}
-          enabled={!!origemUf}
-        >
-          <Picker.Item label="Selecione a cidade" value="" />
-          {cidadesOrigem.map((cidade) => (
-            <Picker.Item key={cidade} label={cidade} value={cidade} />
-          ))}
-        </Picker>
-
-        <Text style={styles.label}>Origem - Bairro:</Text>
-        <TextInput
-          style={styles.input}
-          value={origemBairro}
-          onChangeText={setOrigemBairro}
-          placeholder="Digite o bairro"
-          placeholderTextColor="#222" // <-- cor escura para dica
+          containerStyle={{ marginBottom: 16, width: '90%', alignSelf: 'center' }}
+          zIndex={2000}
+          textStyle={styles.dropDownText}
+          labelStyle={styles.dropDownText}
         />
+
+        {/* Origem - Bairro */}
+        {perguntarBairro && (
+          <>
+            <Text style={styles.label}>Origem - Bairro:</Text>
+            <TextInput
+              style={styles.input}
+              value={origemBairro}
+              onChangeText={setOrigemBairro}
+              placeholder="Digite o bairro de origem"
+              placeholderTextColor="#222"
+            />
+          </>
+        )}
 
         <Text style={styles.label}>Destino - UF:</Text>
         <Picker
@@ -794,32 +1079,45 @@ export default function Pesquisa() {
           }}
           style={styles.input}
         >
-          {ufs.map((uf) => (
-            <Picker.Item key={uf} label={uf} value={uf} />
+          {estadosCidades.estados.map((estado) => (
+            <Picker.Item key={estado.sigla} label={estado.nome} value={estado.sigla} />
           ))}
         </Picker>
 
         <Text style={styles.label}>Destino - Cidade:</Text>
-        <Picker
-          selectedValue={destinoCidade}
-          onValueChange={setDestinoCidade}
+        <DropDownPicker
+          open={openDestino}
+          value={cidadeDestinoValue}
+          items={cidadesDestinoItems}
+          setOpen={setOpenDestino}
+          setValue={val => {
+            setCidadeDestinoValue(val());
+            setDestinoCidade(val());
+          }}
+          setItems={setCidadesDestinoItems}
+          placeholder="Selecione a cidade"
+          searchable={true}
+          searchPlaceholder="Filtrar cidade..."
           style={styles.input}
-          enabled={!!destinoUf}
-        >
-          <Picker.Item label="Selecione a cidade" value="" />
-          {cidadesDestino.map((cidade) => (
-            <Picker.Item key={cidade} label={cidade} value={cidade} />
-          ))}
-        </Picker>
-
-        <Text style={styles.label}>Destino - Bairro:</Text>
-        <TextInput
-          style={styles.input}
-          value={destinoBairro}
-          onChangeText={setDestinoBairro}
-          placeholder="Digite o bairro"
-          placeholderTextColor="#222" // <-- cor escura para dica
+          containerStyle={{ marginBottom: 16, width: '90%', alignSelf: 'center' }}
+          zIndex={1000}
+          textStyle={styles.dropDownText}
+          labelStyle={styles.dropDownText}
         />
+
+        {/* Destino - Bairro */}
+        {perguntarBairro && (
+          <>
+            <Text style={styles.label}>Destino - Bairro:</Text>
+            <TextInput
+              style={styles.input}
+              value={destinoBairro}
+              onChangeText={setDestinoBairro}
+              placeholder="Digite o bairro de destino"
+              placeholderTextColor="#222" // <-- cor escura para dica
+            />
+          </>
+        )}
 
         <Text style={styles.label}>Frequência de viagem:</Text>
         <Picker
@@ -837,10 +1135,17 @@ export default function Pesquisa() {
             <Button title="Voltar" onPress={() => setEtapa(1)} color="#072531a4" />
           </View>
           <View style={{ flex: 1 }}>
-            <Button
+                        <Button
               title="Salvar Pesquisa"
               color="#021b36ff"
-              onPress={() => {
+              onPress={async () => {
+                // Validação dos campos de bairro
+                if (perguntarBairro) {
+                  if (!origemBairro.trim() || !destinoBairro.trim()) {
+                    Alert.alert("Preencha o bairro de origem e destino!");
+                    return;
+                  }
+                }
                 const dados = {
                   tipoOnibus,
                   origemUf,
@@ -850,17 +1155,27 @@ export default function Pesquisa() {
                   destinoCidade,
                   destinoBairro,
                   frequencia,
-                  data: new Date().toLocaleString()
+                  data: new Date()
                 };
-                salvarPesquisaLocal(dados);
-                enviarPesquisaServidor(dados);
+                // Monte o objeto completo com perguntas fixas
+                const respostasFixasStr = await AsyncStorage.getItem('respostasFixas');
+                const respostasFixas = respostasFixasStr ? JSON.parse(respostasFixasStr) : {};
+                const { data, ...respostasFixasSemData } = respostasFixas;
+                const dadosComFixas = {
+                  ...dados,
+                  ...respostasFixasSemData,
+                  data: new Date()
+                };
+                await salvarPesquisaLocal(dadosComFixas);
+                enviarPesquisaServidor(dadosComFixas); // sem await!
                 if (typeof window !== 'undefined') {
                   window.alert('Pesquisa Salva!');
                 } else {
                   Alert.alert('Pesquisa Salva!');
                 }
-                router.replace('/'); // retorna à tela inicial
+                router.replace('/');
               }}
+            />
             />
           </View>
         </View>
@@ -946,6 +1261,10 @@ const  styles = StyleSheet.create({
     marginBottom: 12,
     alignSelf: "center",
   },
+  dropDownText: {
+    fontSize: 18, // ou maior, se preferir
+    color: "#222",
+  },
 });
 
 // Exemplo de função para salvar perguntas fixas
@@ -960,3 +1279,12 @@ const salvarPerguntasFixas = async () => {
   await AsyncStorage.setItem('respostasFixas', JSON.stringify(respostasFixas));
   // Feedback para usuário, se quiser
 };
+
+
+
+// Adicione esta função utilitária:
+function getChaveClasse(nomeClasse) {
+  if (eixosPorClasse[nomeClasse]) return nomeClasse;
+  const chave = Object.keys(eixosPorClasse).find((k) => nomeClasse.startsWith(k));
+  return chave || Object.keys(eixosPorClasse)[0];
+}
