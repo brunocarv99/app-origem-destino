@@ -213,7 +213,7 @@ export default function Pesquisa() {
   const [classeCaminhao, setClasseCaminhao] = useState(classesCaminhao[0].nome);
   const [eixosSuspenso, setEixosSuspenso] = useState("0");
   const [mercadoria, setMercadoria] = useState(mercadorias[0]);
-  const [pesoBruto, setPesoBruto] = useState("");
+  const [pesoCarga, setPesoCarga] = useState("");
   const [tara, setTara] = useState("");
   const [capacidade, setCapacidade] = useState("");
   const [vazio, setVazio] = useState(vazioOpcoes[0]);
@@ -524,12 +524,12 @@ export default function Pesquisa() {
           />
         )}
 
-        <Text style={styles.label}>Peso bruto (toneladas):</Text>
+        <Text style={styles.label}>Peso da carga (toneladas):</Text>
         <TextInput
           style={styles.input}
-          value={pesoBruto}
-          onChangeText={setPesoBruto}
-          placeholder={classeLimites ? `Limite: ${classeLimites.pbt[0]}–${classeLimites.pbt[1]} t` : ""}
+          value={pesoCarga}
+          onChangeText={setPesoCarga}
+          placeholder="Digite o peso da carga"
           keyboardType="numeric"
           placeholderTextColor="#888"
         />
@@ -553,7 +553,7 @@ export default function Pesquisa() {
           placeholderTextColor="#888"
         />
 
-        <Text style={styles.label}>Vazio:</Text>
+        <Text style={styles.label}>Veículo Carregado:</Text>
         <Picker
           selectedValue={vazio}
           onValueChange={setVazio}
@@ -615,7 +615,7 @@ export default function Pesquisa() {
                   !eixosSuspenso ||
                   !mercadoria ||
                   (mercadoria.startsWith("Outros") && !mercadoriaOutro.trim()) ||
-                  !pesoBruto ||
+                  !pesoCarga ||
                   !capacidade ||
                   !vazio ||
                   !rendaFamiliar ||
@@ -637,20 +637,31 @@ export default function Pesquisa() {
                 const [pbtMin, pbtMax] = classeLimites.pbt;
                 const [capMin, capMax] = classeLimites.capacidade;
 
-                const pbtNum = Number(pesoBruto);
+                const pbtNum = Number(pesoCarga);
                 const capacidadeNum = Number(capacidade);
                 const taraCalculada = pbtNum - capacidadeNum;
 
+                // Validação numérica básica
                 if (isNaN(pbtNum) || isNaN(capacidadeNum)) {
-                  Alert.alert("Preencha Peso Bruto e Capacidade com valores numéricos.");
+                  Alert.alert("Preencha Peso da Carga e Capacidade com valores numéricos.");
                   return;
                 }
-                if (pbtNum < pbtMin || pbtNum > pbtMax) {
-                  Alert.alert(`Peso Bruto fora dos limites para a classe selecionada (${pbtMin}–${pbtMax}t).`);
+
+                // Validação da capacidade (mantém limites da classe)
+                if (capacidadeNum < capMin) {
+                  Alert.alert(`Capacidade não pode ser menor que ${capMin}t para a classe selecionada.`);
                   return;
                 }
-                if (capacidadeNum < capMin || capacidadeNum > capMax) {
-                  Alert.alert(`Capacidade fora dos limites para a classe selecionada (${capMin}–${capMax}t).`);
+
+                if (capacidadeNum > capMax) {
+                  Alert.alert(`Capacidade não pode ser maior que ${capMax}t para a classe selecionada.`);
+                  return;
+                }
+
+                // Nova validação: Peso da Carga não pode ultrapassar Capacidade + 20%
+                const capacidadeMaxima = capacidadeNum * 1.2; // 120% da capacidade
+                if (pbtNum > capacidadeMaxima) {
+                  Alert.alert(`O Peso da Carga (${pbtNum}t) não pode ultrapassar 120% da Capacidade (${capacidadeMaxima.toFixed(1)}t)`);
                   return;
                 }
                
@@ -666,13 +677,13 @@ export default function Pesquisa() {
                   frequencia,
                   eixosSuspenso,
                   mercadoria: mercadoria.startsWith("Outros") ? mercadoriaOutro : mercadoria,
-                  pesoBruto: pbtNum,
+                  pesoCarga: Number(pesoCarga),
                   tara: taraCalculada,
                   capacidade: capacidadeNum,
                   vazio,
                   rendaFamiliar,
                   motivoViagem: motivoViagem.startsWith("Outros") ? motivoViagemOutro : motivoViagem,
-                  data: new Date()
+                  data: formatDateTime(new Date())
                 };
                 // Monte o objeto completo com perguntas fixas
                 const respostasFixasStr = await AsyncStorage.getItem('respostasFixas');
@@ -681,7 +692,7 @@ export default function Pesquisa() {
                 const dadosComFixas = {
                   ...dados,
                   ...respostasFixasSemData,
-                  data: new Date()
+                  data: formatDateTime(new Date())
                 };
                 await salvarPesquisaLocal(dadosComFixas);
                 enviarPesquisaServidor(dadosComFixas); // sem await!
@@ -933,7 +944,7 @@ export default function Pesquisa() {
                   frequencia,
                   rendaFamiliar,
                   motivoViagem: motivoViagem.startsWith("Outros") ? motivoViagemOutro : motivoViagem,
-                  data: new Date()
+                  data: formatDateTime(new Date())
                 };
                 // Monte o objeto completo com perguntas fixas
                 const respostasFixasStr = await AsyncStorage.getItem('respostasFixas');
@@ -942,7 +953,7 @@ export default function Pesquisa() {
                 const dadosComFixas = {
                   ...dados,
                   ...respostasFixasSemData,
-                  data: new Date()
+                  data: formatDateTime(new Date())
                 };
                 await salvarPesquisaLocal(dadosComFixas);
                 enviarPesquisaServidor(dadosComFixas); // sem await!
@@ -1155,7 +1166,7 @@ export default function Pesquisa() {
                   destinoCidade,
                   destinoBairro,
                   frequencia,
-                  data: new Date()
+                  data: formatDateTime(new Date())
                 };
                 // Monte o objeto completo com perguntas fixas
                 const respostasFixasStr = await AsyncStorage.getItem('respostasFixas');
@@ -1164,7 +1175,7 @@ export default function Pesquisa() {
                 const dadosComFixas = {
                   ...dados,
                   ...respostasFixasSemData,
-                  data: new Date()
+                  data: formatDateTime(new Date())
                 };
                 await salvarPesquisaLocal(dadosComFixas);
                 enviarPesquisaServidor(dadosComFixas); // sem await!
@@ -1287,4 +1298,10 @@ function getChaveClasse(nomeClasse) {
   if (eixosPorClasse[nomeClasse]) return nomeClasse;
   const chave = Object.keys(eixosPorClasse).find((k) => nomeClasse.startsWith(k));
   return chave || Object.keys(eixosPorClasse)[0];
+}
+
+// Adicione esta função utilitária (após os imports)
+function formatDateTime(d: Date) {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }

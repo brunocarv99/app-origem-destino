@@ -22,6 +22,7 @@ export default function ConfiguracaoScreen() {
   const router = useRouter();
   const [rodovia, setRodovia] = useState("");
   const [posto, setPosto] = useState("");
+  const [pesquisador, setPesquisador] = useState(""); // novo estado
   const [data, setData] = useState("");
   const [sentidoDe, setSentidoDe] = useState("");
   const [sentidoPara, setSentidoPara] = useState("");
@@ -55,7 +56,7 @@ export default function ConfiguracaoScreen() {
 
   async function salvarConfiguracao() {
     try {
-      const respostasFixas = { rodovia, posto, data, sentidoDe, sentidoPara, perguntarBairro };
+      const respostasFixas = { pesquisador, rodovia, posto, data, sentidoDe, sentidoPara, perguntarBairro };
       await AsyncStorage.setItem("configuracaoPesquisa", JSON.stringify(respostasFixas));
       await AsyncStorage.setItem("respostasFixas", JSON.stringify(respostasFixas));
       await AsyncStorage.setItem("senhaRestricao", SENHA_FIXA);
@@ -167,6 +168,14 @@ export default function ConfiguracaoScreen() {
       {acessoLiberado && (
         <ScrollView contentContainerStyle={styles.container}>
           <Text style={styles.title}>Configurar Pesquisa</Text>
+
+          <Text style={styles.label}>Pesquisador:</Text>
+          <TextInput
+            style={styles.input}
+            value={pesquisador}
+            onChangeText={setPesquisador}
+            placeholder="Nome do pesquisador"
+          />
 
           <Text style={styles.label}>Rodovia:</Text>
           <TextInput
@@ -314,6 +323,9 @@ export default function ConfiguracaoScreen() {
             <View style={modalStyles.overlay}>
               <View style={modalStyles.card}>
                 <Text style={modalStyles.title}>Resumo da Configuração</Text>
+                <Text style={modalStyles.label}>
+                  Pesquisador: <Text style={modalStyles.value}>{pesquisador}</Text>
+                </Text>
                 <Text style={modalStyles.label}>
                   Rodovia:{" "}
                   <Text style={modalStyles.value}>{rodovia}</Text>
