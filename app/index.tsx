@@ -3,6 +3,7 @@ import { Link, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSyncPesquisa } from "../hooks/useSyncPesquisa";
+import { sincronizarPesquisasPendentes } from "./pesquisa/index";
 
 export default function HomeScreen() {
   const [respostas, setRespostas] = useState([]);
@@ -91,11 +92,22 @@ export default function HomeScreen() {
         <Pressable
           style={{
             ...styles.button,
-            backgroundColor: "#072531a4",
+            backgroundColor: "#888",
           }}
           onPress={() => router.push('/banco')}
         >
           <Text style={styles.buttonText}>Visualizar Respostas Salvas</Text>
+        </Pressable>
+        <Pressable
+          style={{
+            ...styles.button,
+            backgroundColor: "#191b19ff",
+          }}
+          onPress={async () => {
+            await sincronizarPesquisasPendentes();
+          }}
+        >
+          <Text style={styles.buttonText}>Sincronizar Pesquisas</Text>
         </Pressable>
       
       </View>

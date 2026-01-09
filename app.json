@@ -42,8 +42,10 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "a7bceb4c-16b3-4597-b9e4-830eba878c1d"
+        "projectId": "d63fafe2-ff59-4f4c-b8c9-3b2967fa599c"
       }
-    }
-  }
+    },
+    "owner": "trafegoappstrata"
+  },
+  "owner": "trafegoappstrata"
 }

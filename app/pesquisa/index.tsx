@@ -149,48 +149,65 @@ async function enviarPesquisaServidor(pesquisa) {
       body: JSON.stringify(pesquisa),
     });
     if (resposta.ok) {
-      // Marcar como enviada no AsyncStorage
+      // Marcar como enviada no AsyncStorage usando o campo id
       const pesquisasSalvas = await AsyncStorage.getItem('pesquisas');
       let pesquisas = pesquisasSalvas ? JSON.parse(pesquisasSalvas) : [];
       pesquisas = pesquisas.map(p =>
-        // Aqui compara por data e, se quiser, por outros campos únicos
-        p.data === pesquisa.data ? { ...p, enviada: true } : p
+        p.id === pesquisa.id ? { ...p, enviada: true } : p
       );
       await AsyncStorage.setItem('pesquisas', JSON.stringify(pesquisas));
     } else {
       Alert.alert('Erro ao enviar pesquisa para o servidor');
     }
   } catch (e) {
-    Alert.alert('Erro de conexão com o servidor');
+    // Não mostra alerta de erro de conexão ao usuário
   }
 }
 
 // Função para sincronizar pesquisas pendentes
+let sincronizando = false;
 async function sincronizarPesquisasPendentes() {
-  const pesquisasSalvas = await AsyncStorage.getItem('pesquisas');
-  const pesquisas = pesquisasSalvas ? JSON.parse(pesquisasSalvas) : [];
-  if (pesquisas.length === 0) return;
+  if (sincronizando) return; // evita concorrência
+  sincronizando = true;
+  try {
+    const pesquisasSalvas = await AsyncStorage.getItem('pesquisas');
+    let pesquisas = pesquisasSalvas ? JSON.parse(pesquisasSalvas) : [];
+    const pendentes = pesquisas.filter(p => !p.enviada);
 
-  let enviadas = [];
-  for (const dados of pesquisas) {
-    try {
-      const resposta = await fetch('https://backend-app-pgrx.onrender.com/pesquisas', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(dados),
-      });
-      if (resposta.ok) {
-        enviadas.push(dados);
+    for (const pesquisa of pendentes) {
+      try {
+        const resposta = await fetch('https://backend-app-pgrx.onrender.com/pesquisas', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(pesquisa),
+        });
+        if (resposta.ok) {
+          pesquisas = pesquisas.map(p =>
+            p.id === pesquisa.id ? { ...p, enviada: true } : p
+          );
+          await AsyncStorage.setItem('pesquisas', JSON.stringify(pesquisas));
+        }
+      } catch (e) {
+        // mantém para próxima tentativa
       }
-    } catch (e) {
-      // Se não conseguir enviar, mantém no array
     }
+    Alert.alert('Sincronização concluída!');
+  } finally {
+    sincronizando = false;
   }
-  // Remove as pesquisas que foram enviadas com sucesso
-  if (enviadas.length > 0) {
-    const restantes = pesquisas.filter(p => !enviadas.includes(p));
-    await AsyncStorage.setItem('pesquisas', JSON.stringify(restantes));
-  }
+}
+
+function getFormattedDateTime(): string {
+  const now = new Date();
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+}
+
+function gerarUUID() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
 }
 
 export default function Pesquisa() {
@@ -257,12 +274,20 @@ export default function Pesquisa() {
   }, []);
 
   useEffect(() => {
-    const unsubscribe = NetInfo.addEventListener(state => {
-      if (state.isConnected && state.isInternetReachable) {
-        sincronizarPesquisasPendentes();
-      }
-    });
-    return () => unsubscribe();
+    // Tenta sincronizar logo ao abrir o app
+    // NetInfo.fetch().then(state => {
+    //   if (state.isConnected && state.isInternetReachable) {
+    //     sincronizarPesquisasPendentes();
+    //   }
+    // });
+
+    // Continua ouvindo mudanças de conexão
+    // const unsubscribe = NetInfo.addEventListener(state => {
+    //   if (state.isConnected && state.isInternetReachable) {
+    //     sincronizarPesquisasPendentes();
+    //   }
+    // });
+    // return () => unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -524,7 +549,7 @@ export default function Pesquisa() {
           />
         )}
 
-        <Text style={styles.label}>Peso da carga (toneladas):</Text>
+        <Text style={styles.label}>Peso da Carga (toneladas):</Text>
         <TextInput
           style={styles.input}
           value={pesoCarga}
@@ -553,15 +578,14 @@ export default function Pesquisa() {
           placeholderTextColor="#888"
         />
 
-        <Text style={styles.label}>Veículo Carregado:</Text>
+        <Text style={styles.label}>Veículo carregado?</Text>
         <Picker
           selectedValue={vazio}
           onValueChange={setVazio}
           style={styles.input}
         >
-          {vazioOpcoes.map((item) => (
-            <Picker.Item key={item} label={item} value={item} />
-          ))}
+          <Picker.Item label="Sim" value="Sim" />
+          <Picker.Item label="Não" value="Não" />
         </Picker>
 
         <Text style={styles.label}>Renda familiar:</Text>
@@ -637,36 +661,27 @@ export default function Pesquisa() {
                 const [pbtMin, pbtMax] = classeLimites.pbt;
                 const [capMin, capMax] = classeLimites.capacidade;
 
-                const pbtNum = Number(pesoCarga);
+                const pesoCargaNum = Number(pesoCarga);
                 const capacidadeNum = Number(capacidade);
-                const taraCalculada = pbtNum - capacidadeNum;
 
-                // Validação numérica básica
-                if (isNaN(pbtNum) || isNaN(capacidadeNum)) {
+                if (isNaN(pesoCargaNum) || isNaN(capacidadeNum)) {
                   Alert.alert("Preencha Peso da Carga e Capacidade com valores numéricos.");
                   return;
                 }
-
-                // Validação da capacidade (mantém limites da classe)
-                if (capacidadeNum < capMin) {
-                  Alert.alert(`Capacidade não pode ser menor que ${capMin}t para a classe selecionada.`);
+                if (pesoCargaNum > capacidadeNum) {
+                  Alert.alert("O Peso da Carga não pode ultrapassar a Capacidade do veículo.");
                   return;
                 }
-
-                if (capacidadeNum > capMax) {
-                  Alert.alert(`Capacidade não pode ser maior que ${capMax}t para a classe selecionada.`);
-                  return;
-                }
-
-                // Nova validação: Peso da Carga não pode ultrapassar Capacidade + 20%
-                const capacidadeMaxima = capacidadeNum * 1.2; // 120% da capacidade
-                if (pbtNum > capacidadeMaxima) {
-                  Alert.alert(`O Peso da Carga (${pbtNum}t) não pode ultrapassar 120% da Capacidade (${capacidadeMaxima.toFixed(1)}t)`);
+                if (capacidadeNum < capMin || capacidadeNum > capMax) {
+                  Alert.alert(`Capacidade fora dos limites para a classe selecionada (${capMin}–${capMax}t).`);
                   return;
                 }
                
                 // Monta o objeto para salvar (tara sempre calculada)
+                const taraCalculada = tara ? Number(tara) : null;
+
                 const dados = {
+                  id: gerarUUID(),
                   classeCaminhao,
                   origemUf,
                   origemCidade,
@@ -683,7 +698,8 @@ export default function Pesquisa() {
                   vazio,
                   rendaFamiliar,
                   motivoViagem: motivoViagem.startsWith("Outros") ? motivoViagemOutro : motivoViagem,
-                  data: formatDateTime(new Date())
+                  data: new Date(),
+                  dataHoraResposta: getFormattedDateTime()
                 };
                 // Monte o objeto completo com perguntas fixas
                 const respostasFixasStr = await AsyncStorage.getItem('respostasFixas');
@@ -692,10 +708,11 @@ export default function Pesquisa() {
                 const dadosComFixas = {
                   ...dados,
                   ...respostasFixasSemData,
-                  data: formatDateTime(new Date())
+                  data: new Date(),
+                  dataHoraResposta: getFormattedDateTime() // <-- NOVO CAMPO
                 };
                 await salvarPesquisaLocal(dadosComFixas);
-                enviarPesquisaServidor(dadosComFixas); // sem await!
+               
                 if (typeof window !== 'undefined') {
                   window.alert('Pesquisa Salva!');
                 } else {
@@ -933,6 +950,7 @@ export default function Pesquisa() {
                   }
                 }
                 const dados = {
+                  id: gerarUUID(),
                   tipoVeiculo,
                   origemUf,
                   origemCidade,
@@ -944,7 +962,8 @@ export default function Pesquisa() {
                   frequencia,
                   rendaFamiliar,
                   motivoViagem: motivoViagem.startsWith("Outros") ? motivoViagemOutro : motivoViagem,
-                  data: formatDateTime(new Date())
+                  data: new Date(),
+                  dataHoraResposta: getFormattedDateTime() // <-- NOVO CAMPO
                 };
                 // Monte o objeto completo com perguntas fixas
                 const respostasFixasStr = await AsyncStorage.getItem('respostasFixas');
@@ -953,10 +972,11 @@ export default function Pesquisa() {
                 const dadosComFixas = {
                   ...dados,
                   ...respostasFixasSemData,
-                  data: formatDateTime(new Date())
+                  data: new Date(),
+                  dataHoraResposta: getFormattedDateTime() // <-- NOVO CAMPO
                 };
                 await salvarPesquisaLocal(dadosComFixas);
-                enviarPesquisaServidor(dadosComFixas); // sem await!
+               
                 if (typeof window !== 'undefined') {
                   window.alert('Pesquisa Salva!');
                 } else {
@@ -1158,6 +1178,7 @@ export default function Pesquisa() {
                   }
                 }
                 const dados = {
+                  id: gerarUUID(),
                   tipoOnibus,
                   origemUf,
                   origemCidade,
@@ -1166,7 +1187,8 @@ export default function Pesquisa() {
                   destinoCidade,
                   destinoBairro,
                   frequencia,
-                  data: formatDateTime(new Date())
+                  data: new Date(),
+                  dataHoraResposta: getFormattedDateTime() // <-- NOVO CAMPO
                 };
                 // Monte o objeto completo com perguntas fixas
                 const respostasFixasStr = await AsyncStorage.getItem('respostasFixas');
@@ -1175,10 +1197,11 @@ export default function Pesquisa() {
                 const dadosComFixas = {
                   ...dados,
                   ...respostasFixasSemData,
-                  data: formatDateTime(new Date())
+                  data: new Date(),
+                  dataHoraResposta: getFormattedDateTime() // <-- NOVO CAMPO
                 };
                 await salvarPesquisaLocal(dadosComFixas);
-                enviarPesquisaServidor(dadosComFixas); // sem await!
+                 // sem await!
                 if (typeof window !== 'undefined') {
                   window.alert('Pesquisa Salva!');
                 } else {
@@ -1300,8 +1323,4 @@ function getChaveClasse(nomeClasse) {
   return chave || Object.keys(eixosPorClasse)[0];
 }
 
-// Adicione esta função utilitária (após os imports)
-function formatDateTime(d: Date) {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-}
+export { sincronizarPesquisasPendentes };

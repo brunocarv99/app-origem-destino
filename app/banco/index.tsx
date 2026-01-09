@@ -21,12 +21,12 @@ export default function Banco() {
       const ano = hoje.getFullYear();
 
       const locaisDoDia = todasLocais.filter((p) => {
-        const dataObj = parseSavedDate(p.data);
-        if (!dataObj) return false;
+        if (!p.data) return false;
+        const data = new Date(p.data);
         return (
-          dataObj.getDate() === dia &&
-          dataObj.getMonth() === mes &&
-          dataObj.getFullYear() === ano
+          data.getDate() === dia &&
+          data.getMonth() === mes &&
+          data.getFullYear() === ano
         );
       });
 
@@ -75,7 +75,7 @@ export default function Banco() {
           respostas.map((item, idx) => (
             <View key={idx} style={styles.card}>
               <Text>
-                Data/Hora: {formatSavedDateForDisplay(item.data)}
+                Data/Hora: {item.data ? new Date(item.data).toLocaleString("pt-BR") : ""}
               </Text>
               {Object.entries(item).map(([key, value]) => (
                 <View key={key} style={styles.row}>
@@ -101,26 +101,3 @@ const styles = StyleSheet.create({
   value: { flex: 1, color: '#333' },
   empty: { fontSize: 14, color: '#888', marginTop: 20 }
 });
-
-// Helpers para aceitar vários formatos salvos e formatar para exibição
-function parseSavedDate(val: any): Date | null {
-  if (!val) return null;
-  if (val instanceof Date) return val;
-  if (typeof val === "number") return new Date(val);
-  if (typeof val === "string") {
-    // aceita "YYYY-MM-DD HH:mm:ss" ou "YYYY-MM-DDTHH:mm:ss..." ou outros ISO
-    const m = val.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/);
-    if (m) {
-      const [, y, mo, d, hh, mm, ss] = m;
-      return new Date(Number(y), Number(mo) - 1, Number(d), Number(hh), Number(mm), Number(ss));
-    }
-    const parsed = Date.parse(val);
-    if (!isNaN(parsed)) return new Date(parsed);
-  }
-  return null;
-}
-
-function formatSavedDateForDisplay(val: any) {
-  const d = parseSavedDate(val);
-  return d ? d.toLocaleString("pt-BR") : String(val || "");
-}

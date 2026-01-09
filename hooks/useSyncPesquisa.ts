@@ -1,35 +1,58 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
-const API_URL = 'http://localhost:3001/pesquisas'; // ajuste para o IP do backend se necessário
+const API_URL = 'https://pesquisaod.onrender.com/pesquisas';
 
 export function useSyncPesquisa() {
-  useEffect(() => {
-    const unsubscribe = NetInfo.addEventListener(async (state) => {
-      if (state.isConnected) {
-        try {
-          const pesquisas = await AsyncStorage.getItem('pesquisas');
-          if (pesquisas) {
-            const lista = JSON.parse(pesquisas);
-            for (const pesquisa of lista) {
-              // Envia cada pesquisa para o backend
-              await fetch(API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(pesquisa),
-              });
-            }
-            // Limpa pesquisas locais após sincronizar
-            await AsyncStorage.removeItem('pesquisas');
+  const syncInProgress = useRef(false);
+
+  const syncPesquisas = async () => {
+    if (syncInProgress.current) return;
+    
+    try {
+      syncInProgress.current = true;
+      const pesquisasSalvas = await AsyncStorage.getItem('pesquisas');
+      
+      if (pesquisasSalvas) {
+        const pesquisas = JSON.parse(pesquisasSalvas);
+        const naoEnviadas = pesquisas.filter(p => !p.jaEnviado);
+        
+        for (const pesquisa of naoEnviadas) {
+          try {
+            await fetch(API_URL, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(pesquisa)
+            });
+            
+            pesquisa.jaEnviado = true;
+          } catch (error) {
+            console.error('Erro ao enviar pesquisa:', error);
           }
-        } catch (err) {
-          console.log('Erro ao sincronizar:', err);
         }
+        
+        // Atualiza o storage com as flags atualizadas
+        await AsyncStorage.setItem('pesquisas', JSON.stringify(pesquisas));
+      }
+    } finally {
+      syncInProgress.current = false;
+    }
+  };
+
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener(state => {
+      if (state.isConnected) {
+        syncPesquisas();
       }
     });
+
     return () => unsubscribe();
   }, []);
+
+  return { syncPesquisas };
 }
 
 export default function HomeScreen() {
