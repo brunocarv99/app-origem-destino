@@ -406,7 +406,9 @@ export default function Pesquisa() {
                   setClasseCaminhao(classe.nome);
                   const novaChave = getChaveClasse(classe.nome);
                   const eixos = eixosPorClasse[novaChave] || ["0"];
-                  setEixosSuspenso(eixos[0]);
+                  // Não pré-selecionar quantidade para que o picker mostre
+                  // a opção "Selecione a quantidade" por padrão.
+                  setEixosSuspenso("");
                 }}
               >
                 <Text style={styles.tipoVeiculoTexto}>{classe.nome}</Text>
@@ -452,9 +454,14 @@ export default function Pesquisa() {
     const classeSelecionadaObj = classesCaminhao.find(c => c.nome === classeCaminhao);
     const chaveClasse = getChaveClasse(classeCaminhao);
 
-    // ADICIONE ESTA LINHA:
+    // Limites e cálculo de capacidade dinamicamente exibida
     const classeLimites = limitesPorClasse[classeCaminhao];
     const [taraMin, taraMax] = getLimitesTara(classeCaminhao);
+    const pesoBrutoNumDisplay = Number(pesoBruto);
+    const taraNumDisplay = Number(tara);
+    const capacidadeDisponivel = (!isNaN(pesoBrutoNumDisplay) && !isNaN(taraNumDisplay))
+      ? Math.max(0, pesoBrutoNumDisplay - taraNumDisplay)
+      : null;
 
     return (
       <ScrollView contentContainerStyle={[styles.container, { paddingBottom: 48 }]}>
@@ -489,7 +496,7 @@ export default function Pesquisa() {
           value={cidadeBuscaOrigem}
           onChangeText={setCidadeBuscaOrigem}
           onFocus={() => setOpenOrigem(true)}
-          placeholder="Buscar cidade (sem acento funciona)"
+          placeholder="Buscar cidade — selecione na lista"
           placeholderTextColor="#666"
         />
         {
@@ -552,7 +559,7 @@ export default function Pesquisa() {
           value={cidadeBuscaDestino}
           onChangeText={setCidadeBuscaDestino}
           onFocus={() => setOpenDestino(true)}
-          placeholder="Buscar cidade (sem acento funciona)"
+          placeholder="Buscar cidade (sem acento funciona) — selecione na lista"
           placeholderTextColor="#666"
         />
         {
@@ -651,16 +658,6 @@ export default function Pesquisa() {
           <Picker.Item label="Não" value="Não" />
         </Picker>
 
-        <Text style={styles.label}>Peso da Carga (toneladas):</Text>
-        <TextInput
-          style={styles.input}
-          value={pesoCarga}
-          onChangeText={setPesoCarga}
-          placeholder="Digite o peso da carga"
-          keyboardType="numeric"
-          placeholderTextColor="#888"
-        />
-
         <Text style={styles.label}>Peso bruto do veículo (toneladas):</Text>
         <TextInput
           style={styles.input}
@@ -678,6 +675,28 @@ export default function Pesquisa() {
           onChangeText={setTara}
           keyboardType="numeric"
           placeholder="Digite o peso da tara"
+          placeholderTextColor="#888"
+        />
+
+        <Text style={styles.label}>Peso da Carga (toneladas):</Text>
+        {capacidadeDisponivel !== null && (
+          <Text style={{ alignSelf: 'flex-start', marginLeft: '5%', marginBottom: 6, color: '#444' }}>
+            Capacidade disponível: {capacidadeDisponivel} t (intervalo 0–{capacidadeDisponivel} t)
+          </Text>
+        )}
+        <TextInput
+          style={styles.input}
+          value={pesoCarga}
+          onChangeText={(text) => {
+            // troca vírgula por ponto e permite apenas números e um ponto
+            const sanitized = text.replace(/,/g, '.').replace(/[^0-9.]/g, '');
+            const parts = sanitized.split('.');
+            const safe = parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : sanitized;
+            setPesoCarga(safe);
+          }}
+          editable={true}
+          placeholder={capacidadeDisponivel !== null ? `Intervalo: 0–${capacidadeDisponivel} t` : 'Digite o peso da carga'}
+          keyboardType="numeric"
           placeholderTextColor="#888"
         />
 
@@ -722,6 +741,10 @@ export default function Pesquisa() {
               title="Salvar Pesquisa"
               color="#021b36ff"
               onPress={async () => {
+                console.log('[DEBUG] Salvando pesquisa caminhão - campos:', {
+                  classeCaminhao, origemUf, origemCidade, destinoUf, destinoCidade,
+                  frequencia, eixosSuspenso, mercadoria, pesoCarga, pesoBruto, tara, vazio,
+                });
                 // Validação dos campos obrigatórios (todas as perguntas devem ser respondidas)
                 const obrigatorios = [
                   origemUf,
@@ -753,6 +776,16 @@ export default function Pesquisa() {
                   return;
                 }
 
+                // Verifica se o usuário realmente selecionou a cidade na lista
+                if (!origemCidade) {
+                  Alert.alert('Selecione uma cidade de Origem válida na lista (não apenas digitando).');
+                  return;
+                }
+                if (!destinoCidade) {
+                  Alert.alert('Selecione uma cidade de Destino válida na lista (não apenas digitando).');
+                  return;
+                }
+
                 // Limites por classe
                 const classeLimites = limitesPorClasse[classeCaminhao];
                 const [taraMin, taraMax] = getLimitesTara(classeCaminhao);
@@ -765,17 +798,36 @@ export default function Pesquisa() {
 
                 const pesoCargaNum = Number(pesoCarga);
                 const pesoBrutoNum = Number(pesoBruto);
+                const taraNum = Number(tara);
 
-                if (isNaN(pesoCargaNum) || isNaN(pesoBrutoNum)) {
-                  Alert.alert("Preencha Peso da Carga e Peso bruto do veículo com valores numéricos.");
+                if (isNaN(pesoCargaNum) || isNaN(pesoBrutoNum) || isNaN(taraNum)) {
+                  Alert.alert("Preencha Peso da Carga, Peso bruto e Tara com valores numéricos.");
                   return;
                 }
-                if (pesoCargaNum > pesoBrutoNum) {
-                  Alert.alert("O Peso da Carga não pode ultrapassar o Peso bruto do veículo.");
-                  return;
-                }
+
                 if (pesoBrutoNum < pbtMin || pesoBrutoNum > pbtMax) {
                   Alert.alert(`Peso bruto fora dos limites para a classe selecionada (${pbtMin}–${pbtMax}t).`);
+                  return;
+                }
+
+                if (taraNum > pesoBrutoNum) {
+                  Alert.alert("A tara não pode ser maior que o Peso bruto do veículo.");
+                  return;
+                }
+
+                if (taraNum < taraMin || taraNum > taraMax) {
+                  Alert.alert(`Tara fora dos limites para a classe selecionada (${taraMin}–${taraMax}t).`);
+                  return;
+                }
+
+                const capacidade = pesoBrutoNum - taraNum;
+                if (capacidade < 0) {
+                  Alert.alert("Tara inválida. A capacidade resultante é negativa.");
+                  return;
+                }
+
+                if (pesoCargaNum < 0 || pesoCargaNum > capacidade) {
+                  Alert.alert(`Peso da Carga inválido. Deve estar entre 0 e ${capacidade} t.`);
                   return;
                 }
                
@@ -813,14 +865,18 @@ export default function Pesquisa() {
                   data: new Date(),
                   dataHoraResposta: getFormattedDateTime() // <-- NOVO CAMPO
                 };
-                await salvarPesquisaLocal(dadosComFixas);
-               
-                if (typeof window !== 'undefined') {
-                  window.alert('Pesquisa Salva!');
-                } else {
-                  Alert.alert('Pesquisa Salva!');
+                try {
+                  await salvarPesquisaLocal(dadosComFixas);
+                  if (typeof window !== 'undefined') {
+                    window.alert('Pesquisa Salva!');
+                  } else {
+                    Alert.alert('Pesquisa Salva!');
+                  }
+                  router.replace('/');
+                } catch (err) {
+                  console.error('[ERROR] salvarPesquisaLocal failed:', err);
+                  Alert.alert('Erro ao salvar pesquisa (verifique console).');
                 }
-                router.replace('/');
               }}
             />
           </View>
@@ -905,6 +961,13 @@ export default function Pesquisa() {
           value={cidadeBuscaOrigem}
           onChangeText={setCidadeBuscaOrigem}
           onFocus={() => setOpenOrigem(true)}
+          onBlur={() => {
+            // Delay revert so suggestion click can run first (fixes web ordering)
+            setTimeout(() => {
+              if (cidadeBuscaOrigem !== origemCidade) setCidadeBuscaOrigem(origemCidade);
+              setOpenOrigem(false);
+            }, 150);
+          }}
           placeholder="Buscar cidade (sem acento funciona)"
           placeholderTextColor="#666"
         />
@@ -968,6 +1031,13 @@ export default function Pesquisa() {
           value={cidadeBuscaDestino}
           onChangeText={setCidadeBuscaDestino}
           onFocus={() => setOpenDestino(true)}
+          onBlur={() => {
+            // Delay revert so suggestion click can run first (fixes web ordering)
+            setTimeout(() => {
+              if (cidadeBuscaDestino !== destinoCidade) setCidadeBuscaDestino(destinoCidade);
+              setOpenDestino(false);
+            }, 150);
+          }}
           placeholder="Buscar cidade (sem acento funciona)"
           placeholderTextColor="#666"
         />
@@ -1099,6 +1169,24 @@ export default function Pesquisa() {
                   Alert.alert("Preencha todas as perguntas obrigatórias!");
                   return;
                 }
+                // Verifica se o usuário realmente selecionou a cidade na lista
+                if (!origemCidade) {
+                  Alert.alert('Selecione uma cidade de Origem válida na lista (não apenas digitando).');
+                  return;
+                }
+                if (!destinoCidade) {
+                  Alert.alert('Selecione uma cidade de Destino válida na lista (não apenas digitando).');
+                  return;
+                }
+                // Verifica se o usuário realmente selecionou a cidade na lista
+                if (!origemCidade) {
+                  Alert.alert('Selecione uma cidade de Origem válida na lista (não apenas digitando).');
+                  return;
+                }
+                if (!destinoCidade) {
+                  Alert.alert('Selecione uma cidade de Destino válida na lista (não apenas digitando).');
+                  return;
+                }
                 const dados = {
                   id: gerarUUID(),
                   tipoVeiculo,
@@ -1147,18 +1235,7 @@ export default function Pesquisa() {
       <View style={styles.container}>
         <Text style={styles.title}>Selecione o tipo de ônibus</Text>
         <ScrollView style={{ width: "100%", maxHeight: 400 }}>
-          {/* Adiciona botão "Selecione o tipo de ônibus" */}
-          <TouchableOpacity
-            key=""
-            style={[
-              styles.tipoVeiculoButton,
-              tipoOnibus === "" ? styles.tipoVeiculoButtonSelecionado : null,
-              { width: "96%", alignSelf: "center", marginVertical: 4, flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 8 }
-            ]}
-            onPress={() => setTipoOnibus("")}
-          >
-            <Text style={styles.tipoVeiculoTexto}>Selecione o tipo de ônibus</Text>
-          </TouchableOpacity>
+          {/* Espaço reservado acima da lista de tipos de ônibus */}
           {tiposOnibus.map((tipo) => {
             const selecionado = tipoOnibus === tipo.valor;
             return (
@@ -1234,6 +1311,14 @@ export default function Pesquisa() {
           style={[styles.input, { marginBottom: 8 }]}
           value={cidadeBuscaOrigem}
           onChangeText={setCidadeBuscaOrigem}
+          onFocus={() => setOpenOrigem(true)}
+          onBlur={() => {
+            // Delay revert so suggestion click can run first (fixes web ordering)
+            setTimeout(() => {
+              if (cidadeBuscaOrigem !== origemCidade) setCidadeBuscaOrigem(origemCidade);
+              setOpenOrigem(false);
+            }, 150);
+          }}
           placeholder="Buscar cidade (sem acento funciona)"
           placeholderTextColor="#666"
         />
@@ -1517,17 +1602,24 @@ const  styles = StyleSheet.create({
   },
 });
 
-// Exemplo de função para salvar perguntas fixas
+// Salva as perguntas fixas usando a configuração salva (mantendo a ordem solicitada)
 const salvarPerguntasFixas = async () => {
-  const respostasFixas = {
-    rodovia: rodovia,        // valor do campo rodovia
-    posto: posto,            // valor do campo posto
-    data: data,              // valor do campo data
-    sentidoDe: sentidoDe,    // valor do campo sentidoDe
-    sentidoPara: sentidoPara // valor do campo sentidoPara
-  };
-  await AsyncStorage.setItem('respostasFixas', JSON.stringify(respostasFixas));
-  // Feedback para usuário, se quiser
+  try {
+    const configStr = await AsyncStorage.getItem('configuracao');
+    const config = configStr ? JSON.parse(configStr) : {};
+    const respostasFixas = {
+      perguntarBairro: config.perguntarBairro ?? false,
+      sentidoDe: config.sentidoDe ?? '',
+      sentidoPara: config.sentidoPara ?? '',
+      data: config.data ?? '',
+      posto: config.posto ?? '',
+      rodovia: config.rodovia ?? '',
+      pesquisador: config.pesquisador ?? ''
+    };
+    await AsyncStorage.setItem('respostasFixas', JSON.stringify(respostasFixas));
+  } catch (e) {
+    console.error('Erro ao salvar perguntas fixas:', e);
+  }
 };
 
 

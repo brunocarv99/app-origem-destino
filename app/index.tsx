@@ -1,27 +1,15 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Link, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSyncPesquisa } from "../hooks/useSyncPesquisa";
 import { sincronizarPesquisasPendentes } from "./pesquisa/index";
 
 export default function HomeScreen() {
-  const [respostas, setRespostas] = useState([]);
-  const [senha, setSenha] = useState('');
-  const [autenticado, setAutenticado] = useState(false);
+  
   const router = useRouter();
-
-  const visualizarRespostas = async () => {
-    const pesquisasSalvas = await AsyncStorage.getItem("pesquisas");
-    setRespostas(pesquisasSalvas ? JSON.parse(pesquisasSalvas) : []);
-  };
-
+  
   useEffect(() => {
-    const fetchRespostas = async () => {
-      const pesquisasSalvas = await AsyncStorage.getItem('pesquisas');
-      setRespostas(pesquisasSalvas ? JSON.parse(pesquisasSalvas) : []);
-    };
-    fetchRespostas();
+    // kept for side-effects in hook; no local respostas state needed here
   }, []);
 
   useSyncPesquisa();
@@ -79,7 +67,7 @@ export default function HomeScreen() {
             <Text style={styles.buttonText}>Iniciar pesquisa - Ônibus</Text>
           </Pressable>
         </Link>
-        <Link href="/config" asChild>
+        <Link href="/admin" asChild>
           <Pressable
             style={{
               ...styles.button,
@@ -89,15 +77,6 @@ export default function HomeScreen() {
             <Text style={styles.buttonText}>Configurar Pesquisa</Text>
           </Pressable>
         </Link>
-        <Pressable
-          style={{
-            ...styles.button,
-            backgroundColor: "#888",
-          }}
-          onPress={() => router.push('/banco')}
-        >
-          <Text style={styles.buttonText}>Visualizar Respostas Salvas</Text>
-        </Pressable>
         <Pressable
           style={{
             ...styles.button,
@@ -111,6 +90,8 @@ export default function HomeScreen() {
         </Pressable>
       
       </View>
+
+      
     </View>
   );
 }
@@ -136,24 +117,24 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     width: "100%",
-    marginTop: -40, // Suba o bloco de pesquisa e botões
+    marginTop: -40, 
   },
   subtitleRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 8, // Menos espaço entre DER e pesquisa
+    marginBottom: 8, 
     marginTop: 0,
     width: "100%",
   },
   subtitle: {
     fontSize: 20,
     color: "#555",
-    marginRight: 2, // Reduza para aproximar do logo DER
+    marginRight: 2, 
     fontWeight: "bold",
   },
   logoDer: {
-    width: 35, // Ajuste para um tamanho mais proporcional ao texto
+    width: 35, 
     height: 35,
   },
   titleRow: {

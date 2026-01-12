@@ -15,7 +15,7 @@ import {
 // Defina a senha fixa aqui
 const SENHA_FIXA = "@trafego25";
 
-export default function ConfiguracaoScreen() {
+export default function ConfiguracaoScreen({ requirePassword = true }: { requirePassword?: boolean }) {
         // Função para salvar configuração
     function salvarConfiguracao() {
       if (!pesquisador || !rodovia || !posto || !data || !sentidoDe || !sentidoPara) {
@@ -48,10 +48,10 @@ export default function ConfiguracaoScreen() {
     };
     // Estado para configuração salva
     const [configSalva, setConfigSalva] = useState<ConfigType | null>(null);
-    const [showSenhaModal, setShowSenhaModal] = useState(true);
+    const [showSenhaModal, setShowSenhaModal] = useState(requirePassword);
     const [senhaDigitada, setSenhaDigitada] = useState("");
     const [erroSenha, setErroSenha] = useState("");
-    const [acessoLiberado, setAcessoLiberado] = useState(false);
+    const [acessoLiberado, setAcessoLiberado] = useState(!requirePassword);
     const [mostrandoNovaConfig, setMostrandoNovaConfig] = useState(false);
     // Estados do formulário de configuração
     const [pesquisador, setPesquisador] = useState("");
@@ -186,27 +186,44 @@ export default function ConfiguracaoScreen() {
             {(!configSalva || mostrandoNovaConfig) && (
               <>
                 <Text style={styles.title}>Configurar Pesquisa</Text>
-                <Text style={styles.label}>Pesquisador:</Text>
+
+                <Text style={styles.label}>Perguntar bairro de origem e destino?</Text>
+                <View style={{ flexDirection: "row", marginBottom: 16 }}>
+                  <TouchableOpacity
+                    style={[
+                      styles.button,
+                      { backgroundColor: perguntarBairro ? "#021b36ff" : "#888", marginRight: 8 },
+                    ]}
+                    onPress={() => setPerguntarBairro(true)}
+                  >
+                    <Text style={styles.buttonText}>Sim</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.button,
+                      { backgroundColor: !perguntarBairro ? "#021b36ff" : "#888" },
+                    ]}
+                    onPress={() => setPerguntarBairro(false)}
+                  >
+                    <Text style={styles.buttonText}>Não</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <Text style={styles.label}>Sentido de:</Text>
                 <TextInput
                   style={styles.input}
-                  value={pesquisador}
-                  onChangeText={setPesquisador}
-                  placeholder="Nome do pesquisador"
+                  value={sentidoDe}
+                  onChangeText={setSentidoDe}
+                  placeholder="Sentido de"
                 />
-                <Text style={styles.label}>Rodovia:</Text>
+                <Text style={styles.label}>Sentido para:</Text>
                 <TextInput
                   style={styles.input}
-                  value={rodovia}
-                  onChangeText={setRodovia}
-                  placeholder="Digite a rodovia"
+                  value={sentidoPara}
+                  onChangeText={setSentidoPara}
+                  placeholder="Sentido para"
                 />
-                <Text style={styles.label}>Posto:</Text>
-                <TextInput
-                  style={styles.input}
-                  value={posto}
-                  onChangeText={setPosto}
-                  placeholder="Digite o posto"
-                />
+
                 <Text style={styles.label}>Data:</Text>
                 <Pressable onPress={() => setShowDatePicker(true)}>
                   <TextInput
@@ -234,41 +251,29 @@ export default function ConfiguracaoScreen() {
                     }}
                   />
                 )}
-                <Text style={styles.label}>Sentido de:</Text>
+
+                <Text style={styles.label}>Posto:</Text>
                 <TextInput
                   style={styles.input}
-                  value={sentidoDe}
-                  onChangeText={setSentidoDe}
-                  placeholder="Sentido de"
+                  value={posto}
+                  onChangeText={setPosto}
+                  placeholder="Digite o posto"
                 />
-                <Text style={styles.label}>Sentido para:</Text>
+                <Text style={styles.label}>Rodovia:</Text>
                 <TextInput
                   style={styles.input}
-                  value={sentidoPara}
-                  onChangeText={setSentidoPara}
-                  placeholder="Sentido para"
+                  value={rodovia}
+                  onChangeText={setRodovia}
+                  placeholder="Digite a rodovia"
                 />
-                <Text style={styles.label}>Perguntar bairro de origem e destino?</Text>
-                <View style={{ flexDirection: "row", marginBottom: 16 }}>
-                  <TouchableOpacity
-                    style={[
-                      styles.button,
-                      { backgroundColor: perguntarBairro ? "#021b36ff" : "#888", marginRight: 8 },
-                    ]}
-                    onPress={() => setPerguntarBairro(true)}
-                  >
-                    <Text style={styles.buttonText}>Sim</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.button,
-                      { backgroundColor: !perguntarBairro ? "#021b36ff" : "#888" },
-                    ]}
-                    onPress={() => setPerguntarBairro(false)}
-                  >
-                    <Text style={styles.buttonText}>Não</Text>
-                  </TouchableOpacity>
-                </View>
+                <Text style={styles.label}>Pesquisador:</Text>
+                <TextInput
+                  style={styles.input}
+                  value={pesquisador}
+                  onChangeText={setPesquisador}
+                  placeholder="Nome do pesquisador"
+                />
+
                 <Pressable
                   style={{ ...styles.button, backgroundColor: "#021b36ff" }}
                   onPress={salvarConfiguracao}
@@ -301,22 +306,25 @@ export default function ConfiguracaoScreen() {
                 <View style={modalStyles.card}>
                   <Text style={modalStyles.title}>Resumo da Configuração</Text>
                   <Text style={modalStyles.label}>
-                    Pesquisador: <Text style={modalStyles.value}>{pesquisador}</Text>
+                    Perguntar bairro: <Text style={modalStyles.value}>{(configSalva?.perguntarBairro ?? perguntarBairro) ? 'Sim' : 'Não'}</Text>
                   </Text>
                   <Text style={modalStyles.label}>
-                    Rodovia: <Text style={modalStyles.value}>{rodovia}</Text>
+                    Sentido de: <Text style={modalStyles.value}>{configSalva?.sentidoDe ?? sentidoDe}</Text>
                   </Text>
                   <Text style={modalStyles.label}>
-                    Posto: <Text style={modalStyles.value}>{posto}</Text>
+                    Sentido para: <Text style={modalStyles.value}>{configSalva?.sentidoPara ?? sentidoPara}</Text>
                   </Text>
                   <Text style={modalStyles.label}>
-                    Data: <Text style={modalStyles.value}>{data}</Text>
+                    Data: <Text style={modalStyles.value}>{configSalva?.data ?? data}</Text>
                   </Text>
                   <Text style={modalStyles.label}>
-                    Sentido de: <Text style={modalStyles.value}>{sentidoDe}</Text>
+                    Posto: <Text style={modalStyles.value}>{configSalva?.posto ?? posto}</Text>
                   </Text>
                   <Text style={modalStyles.label}>
-                    Sentido para: <Text style={modalStyles.value}>{sentidoPara}</Text>
+                    Rodovia: <Text style={modalStyles.value}>{configSalva?.rodovia ?? rodovia}</Text>
+                  </Text>
+                  <Text style={modalStyles.label}>
+                    Pesquisador: <Text style={modalStyles.value}>{configSalva?.pesquisador ?? pesquisador}</Text>
                   </Text>
                   <View style={{ flexDirection: "row", marginTop: 24, gap: 12 }}>
                     <TouchableOpacity

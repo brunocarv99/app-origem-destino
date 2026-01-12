@@ -7,7 +7,8 @@ import { Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View 
 const SENHA_FIXA = "@trafego25";
 
 
-export default function Banco() {
+
+export default function Banco({ requirePassword = true }: { requirePassword?: boolean }) {
   const [respostas, setRespostas] = useState([]);
   const [totalHoje, setTotalHoje] = useState(0);
   const [totalPasseio, setTotalPasseio] = useState(0);
@@ -15,15 +16,19 @@ export default function Banco() {
   const [totalOnibus, setTotalOnibus] = useState(0);
 
   // Controle de senha
-  const [acessoLiberado, setAcessoLiberado] = useState(false);
+  const [acessoLiberado, setAcessoLiberado] = useState(!requirePassword);
   const [senhaDigitada, setSenhaDigitada] = useState("");
-  const [showSenhaModal, setShowSenhaModal] = useState(true);
+  const [showSenhaModal, setShowSenhaModal] = useState(requirePassword);
   const [erroSenha, setErroSenha] = useState("");
 
   useEffect(() => {
-    setShowSenhaModal(true);
-    setAcessoLiberado(false);
-  }, []);
+    setShowSenhaModal(requirePassword);
+    setAcessoLiberado(!requirePassword);
+    if (!requirePassword) {
+      // carregar respostas automaticamente quando não exigir senha
+      fetchLocais();
+    }
+  }, [requirePassword]);
 
   function validarSenha() {
     if (senhaDigitada === SENHA_FIXA) {
