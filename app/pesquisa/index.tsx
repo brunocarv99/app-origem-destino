@@ -1,11 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import NetInfo from "@react-native-community/netinfo";
 import { Picker } from "@react-native-picker/picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Alert, Button, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import estadosCidades from "../../assets/estados-cidades.json";
-import DropDownPicker from 'react-native-dropdown-picker';
+
+function removerAcentos(str: string) {
+  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
 
 const classesCaminhao = [
   { nome: "2C (2 eixos)", imagem: require("../../assets/images/2c.png") },
@@ -34,11 +36,11 @@ const classesCaminhao = [
 ];
 const frequencias = ["Diária", "Semanal", "Mensal", "Eventual"];
 const rendas = [
-  "Sem renda",
-  "Até R$ 1.000,00",
-  "Entre R$ 1.001,00 e R$ 4.000,00",
+  "Acima de R$ 7.0000,00",
   "Entre R$ 4.001,00 e R$ 7.000,00",
-  "Acima de R$ 7.000,00"
+  "Entre R$ 1.001,00 e R$ 4.000,00",
+  "Até R$ 1.000,00",
+  "Sem renda"
 ];
 const motivosViagem = [
   "Residência",
@@ -127,8 +129,8 @@ const limitesPorClasse = {
   "TRITREM 3S2S2S2 (9 eixos)": { pbt: [63, 93], capacidade: [26, 70] },
   "3M6 (9 eixos)": { pbt: [63, 93], capacidade: [26, 70] },
 };
-function getLimitesTara(classe) {
-  const { pbt, capacidade } = limitesPorClasse[classe] || {};
+function getLimitesTara(classe: any) {
+  const { pbt, capacidade } = (limitesPorClasse as any)[classe] || {};
   if (!pbt || !capacidade) return [0, 0];
   const taraMin = pbt[0]; // Tara mínima = PBT mínimo (capacidade zero)
   const taraMax = pbt[1] - capacidade[0]; // Tara máxima = PBT máximo - Capacidade mínima
@@ -141,7 +143,7 @@ const maxOcupantesPorTipo = {
   Utilitario: 20,
 };
 
-async function enviarPesquisaServidor(pesquisa) {
+async function enviarPesquisaServidor(pesquisa: any) {
   try {
     const resposta = await fetch('https://backend-app-pgrx.onrender.com/pesquisas', {
       method: 'POST',
@@ -152,7 +154,7 @@ async function enviarPesquisaServidor(pesquisa) {
       // Marcar como enviada no AsyncStorage usando o campo id
       const pesquisasSalvas = await AsyncStorage.getItem('pesquisas');
       let pesquisas = pesquisasSalvas ? JSON.parse(pesquisasSalvas) : [];
-      pesquisas = pesquisas.map(p =>
+      pesquisas = pesquisas.map((p: any) =>
         p.id === pesquisa.id ? { ...p, enviada: true } : p
       );
       await AsyncStorage.setItem('pesquisas', JSON.stringify(pesquisas));
@@ -160,7 +162,7 @@ async function enviarPesquisaServidor(pesquisa) {
       Alert.alert('Erro ao enviar pesquisa para o servidor');
     }
   } catch (e) {
-    // Não mostra alerta de erro de conexão ao usuário
+    
   }
 }
 
@@ -172,7 +174,7 @@ async function sincronizarPesquisasPendentes() {
   try {
     const pesquisasSalvas = await AsyncStorage.getItem('pesquisas');
     let pesquisas = pesquisasSalvas ? JSON.parse(pesquisasSalvas) : [];
-    const pendentes = pesquisas.filter(p => !p.enviada);
+    const pendentes = pesquisas.filter((p: any) => !p.enviada);
 
     for (const pesquisa of pendentes) {
       try {
@@ -182,7 +184,7 @@ async function sincronizarPesquisasPendentes() {
           body: JSON.stringify(pesquisa),
         });
         if (resposta.ok) {
-          pesquisas = pesquisas.map(p =>
+          pesquisas = pesquisas.map((p: any) =>
             p.id === pesquisa.id ? { ...p, enviada: true } : p
           );
           await AsyncStorage.setItem('pesquisas', JSON.stringify(pesquisas));
@@ -217,32 +219,32 @@ export default function Pesquisa() {
   const router = useRouter();
 
   // Comuns
-  const [origemUf, setOrigemUf] = useState(ufs[0]);
+  const [origemUf, setOrigemUf] = useState("");
   const [origemCidade, setOrigemCidade] = useState("");
   const [origemBairro, setOrigemBairro] = useState("");
-  const [destinoUf, setDestinoUf] = useState(ufs[0]);
+  const [destinoUf, setDestinoUf] = useState("");
   const [destinoCidade, setDestinoCidade] = useState("");
   const [destinoBairro, setDestinoBairro] = useState("");
-  const [frequencia, setFrequencia] = useState(frequencias[0]);
+  const [frequencia, setFrequencia] = useState("");
 
 
   // Específicos caminhão
-  const [classeCaminhao, setClasseCaminhao] = useState(classesCaminhao[0].nome);
-  const [eixosSuspenso, setEixosSuspenso] = useState("0");
-  const [mercadoria, setMercadoria] = useState(mercadorias[0]);
+  const [classeCaminhao, setClasseCaminhao] = useState("");
+  const [eixosSuspenso, setEixosSuspenso] = useState("");
+  const [mercadoria, setMercadoria] = useState("");
   const [pesoCarga, setPesoCarga] = useState("");
   const [tara, setTara] = useState("");
-  const [capacidade, setCapacidade] = useState("");
-  const [vazio, setVazio] = useState(vazioOpcoes[0]);
+  const [pesoBruto, setPesoBruto] = useState("");
+  const [vazio, setVazio] = useState("");
 
   // Específicos passeio/moto/utilitário
-  const [tipoVeiculo, setTipoVeiculo] = useState(tiposVeiculo[0].nome);
-  const [ocupacao, setOcupacao] = useState("1");
-  const [tipoOnibus, setTipoOnibus] = useState(tiposOnibus[0].valor);
+  const [tipoVeiculo, setTipoVeiculo] = useState("");
+  const [ocupacao, setOcupacao] = useState("");
+  const [tipoOnibus, setTipoOnibus] = useState("");
 
   // Comuns para ambos
-  const [rendaFamiliar, setRendaFamiliar] = useState(rendas[0]);
-  const [motivoViagem, setMotivoViagem] = useState(motivosViagem[0]);
+  const [rendaFamiliar, setRendaFamiliar] = useState("");
+  const [motivoViagem, setMotivoViagem] = useState("");
   const [motivoViagemOutro, setMotivoViagemOutro] = useState("");
   const [mercadoriaOutro, setMercadoriaOutro] = useState(""); // só caminhão
   // Novo estado para controlar a exibição dos campos de bairro
@@ -263,6 +265,34 @@ export default function Pesquisa() {
   const [cidadesDestinoItems, setCidadesDestinoItems] = useState(
     getCidadesPorUf(destinoUf).map(cidade => ({ label: cidade, value: cidade }))
   );
+
+  // Compatibilizadores para DropDownPicker: alguns lançam um callback, outros o valor diretamente.
+  const handleSetCidadeOrigem = (v: any) => {
+    const value = typeof v === 'function' ? v() : v;
+    setCidadeOrigemValue(value);
+    setOrigemCidade(value);
+    // set search and close, but suppress auto-open for the immediate update
+    suppressOpenOrigemRef.current = true;
+    setCidadeBuscaOrigem(value);
+    setOpenOrigem(false);
+  };
+
+  const handleSetCidadeDestino = (v: any) => {
+    const value = typeof v === 'function' ? v() : v;
+    setCidadeDestinoValue(value);
+    setDestinoCidade(value);
+    // set search and close, but suppress auto-open for the immediate update
+    suppressOpenDestinoRef.current = true;
+    setCidadeBuscaDestino(value);
+    setOpenDestino(false);
+  };
+
+  // refs to suppress auto-open immediately after selection
+  const suppressOpenOrigemRef = useRef(false);
+  const suppressOpenDestinoRef = useRef(false);
+  // timer refs for debouncing auto-open while typing
+  const openTimerOrigemRef = useRef<any>(null);
+  const openTimerDestinoRef = useRef<any>(null);
 
   useEffect(() => {
     AsyncStorage.getItem("respostasFixas").then(str => {
@@ -298,6 +328,21 @@ export default function Pesquisa() {
     setOrigemCidade("");
   }, [origemUf]);
 
+  // Auto-open suggestions while typing (debounced), but don't reopen immediately after a selection
+  useEffect(() => {
+    if (openTimerOrigemRef.current) clearTimeout(openTimerOrigemRef.current);
+    openTimerOrigemRef.current = setTimeout(() => {
+      if (suppressOpenOrigemRef.current) {
+        suppressOpenOrigemRef.current = false;
+        return;
+      }
+      if (cidadeBuscaOrigem && !openOrigem) setOpenOrigem(true);
+    }, 220);
+    return () => {
+      if (openTimerOrigemRef.current) clearTimeout(openTimerOrigemRef.current);
+    };
+  }, [cidadeBuscaOrigem]);
+
   useEffect(() => {
     setCidadesDestinoItems(
       getCidadesPorUf(destinoUf).map(cidade => ({ label: cidade, value: cidade }))
@@ -305,6 +350,20 @@ export default function Pesquisa() {
     setCidadeDestinoValue("");
     setDestinoCidade("");
   }, [destinoUf]);
+
+  useEffect(() => {
+    if (openTimerDestinoRef.current) clearTimeout(openTimerDestinoRef.current);
+    openTimerDestinoRef.current = setTimeout(() => {
+      if (suppressOpenDestinoRef.current) {
+        suppressOpenDestinoRef.current = false;
+        return;
+      }
+      if (cidadeBuscaDestino && !openDestino) setOpenDestino(true);
+    }, 220);
+    return () => {
+      if (openTimerDestinoRef.current) clearTimeout(openTimerDestinoRef.current);
+    };
+  }, [cidadeBuscaDestino]);
 
   // Função para salvar pesquisa localmente
   const salvarPesquisaLocal = async (dadosComFixas) => {
@@ -418,31 +477,45 @@ export default function Pesquisa() {
           }}
           style={styles.input}
         >
+          <Picker.Item label="Selecione a UF" value="" />
           {estadosCidades.estados.map((estado) => (
             <Picker.Item key={estado.sigla} label={estado.nome} value={estado.sigla} />
           ))}
         </Picker>
 
         <Text style={styles.label}>Origem - Cidade:</Text>
-        <DropDownPicker
-          open={openOrigem}
-          value={cidadeOrigemValue}
-          items={cidadesOrigemItems}
-          setOpen={setOpenOrigem}
-          setValue={val => {
-            setCidadeOrigemValue(val());
-            setOrigemCidade(val());
-          }}
-          setItems={setCidadesOrigemItems}
-          placeholder="Selecione a cidade"
-          searchable={true}
-          searchPlaceholder="Filtrar cidade..."
-          style={styles.input}
-          containerStyle={{ marginBottom: 16, width: '90%', alignSelf: 'center' }}
-          zIndex={2000}
-          textStyle={styles.dropDownText}
-          labelStyle={styles.dropDownText}
+        <TextInput
+          style={[styles.input, { marginBottom: 8 }]}
+          value={cidadeBuscaOrigem}
+          onChangeText={setCidadeBuscaOrigem}
+          onFocus={() => setOpenOrigem(true)}
+          placeholder="Buscar cidade (sem acento funciona)"
+          placeholderTextColor="#666"
         />
+        {
+          (() => {
+            const filtered = cidadesOrigemItems.filter(it =>
+              removerAcentos(it.label.toLowerCase()).includes(removerAcentos(cidadeBuscaOrigem.toLowerCase()))
+            );
+            return (
+              openOrigem ? (
+                filtered.length > 0 ? (
+                  <View style={styles.suggestionContainer}>
+                    {filtered.map((it) => (
+                      <TouchableOpacity
+                        key={it.value}
+                        onPress={() => handleSetCidadeOrigem(it.value)}
+                        style={styles.suggestionItem}
+                      >
+                        <Text style={styles.suggestionText}>{it.label}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                ) : null
+              ) : null
+            );
+          })()
+        }
 
         {/* Origem - Bairro */}
         {perguntarBairro && (
@@ -467,31 +540,45 @@ export default function Pesquisa() {
           }}
           style={styles.input}
         >
+          <Picker.Item label="Selecione a UF" value="" />
           {estadosCidades.estados.map((estado) => (
             <Picker.Item key={estado.sigla} label={estado.nome} value={estado.sigla} />
           ))}
         </Picker>
 
         <Text style={styles.label}>Destino - Cidade:</Text>
-        <DropDownPicker
-          open={openDestino}
-          value={cidadeDestinoValue}
-          items={cidadesDestinoItems}
-          setOpen={setOpenDestino}
-          setValue={val => {
-            setCidadeDestinoValue(val());
-            setDestinoCidade(val());
-          }}
-          setItems={setCidadesDestinoItems}
-          placeholder="Selecione a cidade"
-          searchable={true}
-          searchPlaceholder="Filtrar cidade..."
-          style={styles.input}
-          containerStyle={{ marginBottom: 16, width: '90%', alignSelf: 'center' }}
-          zIndex={1000}
-          textStyle={styles.dropDownText}
-          labelStyle={styles.dropDownText}
+        <TextInput
+          style={[styles.input, { marginBottom: 8 }]}
+          value={cidadeBuscaDestino}
+          onChangeText={setCidadeBuscaDestino}
+          onFocus={() => setOpenDestino(true)}
+          placeholder="Buscar cidade (sem acento funciona)"
+          placeholderTextColor="#666"
         />
+        {
+          (() => {
+            const filtered = cidadesDestinoItems.filter(it =>
+              removerAcentos(it.label.toLowerCase()).includes(removerAcentos(cidadeBuscaDestino.toLowerCase()))
+            );
+            return (
+              openDestino ? (
+                filtered.length > 0 ? (
+                  <View style={styles.suggestionContainer}>
+                    {filtered.map((it) => (
+                      <TouchableOpacity
+                        key={it.value}
+                        onPress={() => handleSetCidadeDestino(it.value)}
+                        style={styles.suggestionItem}
+                      >
+                        <Text style={styles.suggestionText}>{it.label}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                ) : null
+              ) : null
+            );
+          })()
+        }
 
         {/* Destino - Bairro */}
         {perguntarBairro && (
@@ -513,6 +600,7 @@ export default function Pesquisa() {
           onValueChange={setFrequencia}
           style={styles.input}
         >
+          <Picker.Item label="Selecione a frequência" value="" />
           {frequencias.map((item) => (
             <Picker.Item key={item} label={item} value={item} />
           ))}
@@ -524,17 +612,20 @@ export default function Pesquisa() {
           onValueChange={setEixosSuspenso}
           style={styles.input}
         >
+          <Picker.Item label="Selecione a quantidade" value="" />
           {(eixosPorClasse[chaveClasse] || ["0"]).map((item) => (
             <Picker.Item key={item} label={item} value={item} />
           ))}
         </Picker>
 
-        <Text style={styles.label}>Mercadoria:</Text>
+
+        <Text style={styles.label}>Qual carga transportada (ou usualmente transportada)?</Text>
         <Picker
           selectedValue={mercadoria}
           onValueChange={setMercadoria}
           style={styles.input}
         >
+          <Picker.Item label="Selecione a mercadoria" value="" />
           {mercadorias.map((item) => (
             <Picker.Item key={item} label={item} value={item} />
           ))}
@@ -549,6 +640,17 @@ export default function Pesquisa() {
           />
         )}
 
+        <Text style={styles.label}>Veículo carregado?</Text>
+        <Picker
+          selectedValue={vazio}
+          onValueChange={setVazio}
+          style={styles.input}
+        >
+          <Picker.Item label="Selecione" value="" />
+          <Picker.Item label="Sim" value="Sim" />
+          <Picker.Item label="Não" value="Não" />
+        </Picker>
+
         <Text style={styles.label}>Peso da Carga (toneladas):</Text>
         <TextInput
           style={styles.input}
@@ -559,12 +661,12 @@ export default function Pesquisa() {
           placeholderTextColor="#888"
         />
 
-        <Text style={styles.label}>Capacidade (toneladas):</Text>
+        <Text style={styles.label}>Peso bruto do veículo (toneladas):</Text>
         <TextInput
           style={styles.input}
-          value={capacidade}
-          onChangeText={setCapacidade}
-          placeholder={classeLimites ? `Limite: ${classeLimites.capacidade[0]}–${classeLimites.capacidade[1]} t` : ""}
+          value={pesoBruto}
+          onChangeText={setPesoBruto}
+          placeholder={classeLimites ? `Limite: ${classeLimites.pbt[0]}–${classeLimites.pbt[1]} t` : ""}
           keyboardType="numeric"
           placeholderTextColor="#888"
         />
@@ -575,18 +677,9 @@ export default function Pesquisa() {
           value={tara}
           onChangeText={setTara}
           keyboardType="numeric"
+          placeholder="Digite o peso da tara"
           placeholderTextColor="#888"
         />
-
-        <Text style={styles.label}>Veículo carregado?</Text>
-        <Picker
-          selectedValue={vazio}
-          onValueChange={setVazio}
-          style={styles.input}
-        >
-          <Picker.Item label="Sim" value="Sim" />
-          <Picker.Item label="Não" value="Não" />
-        </Picker>
 
         <Text style={styles.label}>Renda familiar:</Text>
         <Picker
@@ -594,6 +687,7 @@ export default function Pesquisa() {
           onValueChange={setRendaFamiliar}
           style={styles.input}
         >
+          <Picker.Item label="Selecione a renda" value="" />
           {rendas.map((item) => (
             <Picker.Item key={item} label={item} value={item} />
           ))}
@@ -605,6 +699,7 @@ export default function Pesquisa() {
           onValueChange={setMotivoViagem}
           style={styles.input}
         >
+          <Picker.Item label="Selecione o motivo" value="" />
           {motivosViagem.map((item) => (
             <Picker.Item key={item} label={item} value={item} />
           ))}
@@ -627,25 +722,33 @@ export default function Pesquisa() {
               title="Salvar Pesquisa"
               color="#021b36ff"
               onPress={async () => {
-                // Validação dos campos obrigatórios
-                if (
-                  !origemUf ||
-                  !origemCidade ||
-                  (perguntarBairro && !origemBairro.trim()) ||
-                  !destinoUf ||
-                  !destinoCidade ||
-                  (perguntarBairro && !destinoBairro.trim()) ||
-                  !frequencia ||
-                  !eixosSuspenso ||
-                  !mercadoria ||
-                  (mercadoria.startsWith("Outros") && !mercadoriaOutro.trim()) ||
-                  !pesoCarga ||
-                  !capacidade ||
-                  !vazio ||
-                  !rendaFamiliar ||
-                  !motivoViagem ||
-                  (motivoViagem.startsWith("Outros") && !motivoViagemOutro.trim())
-                ) {
+                // Validação dos campos obrigatórios (todas as perguntas devem ser respondidas)
+                const obrigatorios = [
+                  origemUf,
+                  origemCidade,
+                  destinoUf,
+                  destinoCidade,
+                  frequencia,
+                  eixosSuspenso,
+                  mercadoria,
+                  pesoCarga,
+                  pesoBruto,
+                  tara,
+                  vazio,
+                  rendaFamiliar,
+                  motivoViagem
+                ];
+                if (perguntarBairro) {
+                  obrigatorios.push(origemBairro, destinoBairro);
+                }
+                if (mercadoria.startsWith("Outros")) {
+                  obrigatorios.push(mercadoriaOutro);
+                }
+                if (motivoViagem.startsWith("Outros")) {
+                  obrigatorios.push(motivoViagemOutro);
+                }
+                const algumVazio = obrigatorios.some(v => !v || (typeof v === "string" && v.trim() === ""));
+                if (algumVazio) {
                   Alert.alert("Preencha todas as perguntas obrigatórias!");
                   return;
                 }
@@ -659,21 +762,20 @@ export default function Pesquisa() {
                   return;
                 }
                 const [pbtMin, pbtMax] = classeLimites.pbt;
-                const [capMin, capMax] = classeLimites.capacidade;
 
                 const pesoCargaNum = Number(pesoCarga);
-                const capacidadeNum = Number(capacidade);
+                const pesoBrutoNum = Number(pesoBruto);
 
-                if (isNaN(pesoCargaNum) || isNaN(capacidadeNum)) {
-                  Alert.alert("Preencha Peso da Carga e Capacidade com valores numéricos.");
+                if (isNaN(pesoCargaNum) || isNaN(pesoBrutoNum)) {
+                  Alert.alert("Preencha Peso da Carga e Peso bruto do veículo com valores numéricos.");
                   return;
                 }
-                if (pesoCargaNum > capacidadeNum) {
-                  Alert.alert("O Peso da Carga não pode ultrapassar a Capacidade do veículo.");
+                if (pesoCargaNum > pesoBrutoNum) {
+                  Alert.alert("O Peso da Carga não pode ultrapassar o Peso bruto do veículo.");
                   return;
                 }
-                if (capacidadeNum < capMin || capacidadeNum > capMax) {
-                  Alert.alert(`Capacidade fora dos limites para a classe selecionada (${capMin}–${capMax}t).`);
+                if (pesoBrutoNum < pbtMin || pesoBrutoNum > pbtMax) {
+                  Alert.alert(`Peso bruto fora dos limites para a classe selecionada (${pbtMin}–${pbtMax}t).`);
                   return;
                 }
                
@@ -694,7 +796,7 @@ export default function Pesquisa() {
                   mercadoria: mercadoria.startsWith("Outros") ? mercadoriaOutro : mercadoria,
                   pesoCarga: Number(pesoCarga),
                   tara: taraCalculada,
-                  capacidade: capacidadeNum,
+                  pesoBruto: pesoBrutoNum,
                   vazio,
                   rendaFamiliar,
                   motivoViagem: motivoViagem.startsWith("Outros") ? motivoViagemOutro : motivoViagem,
@@ -791,31 +893,45 @@ export default function Pesquisa() {
           }}
           style={styles.input}
         >
+          <Picker.Item label="Selecione a UF" value="" />
           {estadosCidades.estados.map((estado) => (
             <Picker.Item key={estado.sigla} label={estado.nome} value={estado.sigla} />
           ))}
         </Picker>
 
         <Text style={styles.label}>Origem - Cidade:</Text>
-        <DropDownPicker
-          open={openOrigem}
-          value={cidadeOrigemValue}
-          items={cidadesOrigemItems}
-          setOpen={setOpenOrigem}
-          setValue={val => {
-            setCidadeOrigemValue(val());
-            setOrigemCidade(val());
-          }}
-          setItems={setCidadesOrigemItems}
-          placeholder="Selecione a cidade"
-          searchable={true}
-          searchPlaceholder="Filtrar cidade..."
-          style={styles.input}
-          containerStyle={{ marginBottom: 16, width: '90%', alignSelf: 'center' }}
-          zIndex={2000}
-          textStyle={styles.dropDownText}
-          labelStyle={styles.dropDownText}
+        <TextInput
+          style={[styles.input, { marginBottom: 8 }]}
+          value={cidadeBuscaOrigem}
+          onChangeText={setCidadeBuscaOrigem}
+          onFocus={() => setOpenOrigem(true)}
+          placeholder="Buscar cidade (sem acento funciona)"
+          placeholderTextColor="#666"
         />
+        {
+          (() => {
+            const filtered = cidadesOrigemItems.filter(it =>
+              removerAcentos(it.label.toLowerCase()).includes(removerAcentos(cidadeBuscaOrigem.toLowerCase()))
+            );
+            return (
+              openOrigem ? (
+                filtered.length > 0 ? (
+                  <View style={styles.suggestionContainer}>
+                    {filtered.map((it) => (
+                      <TouchableOpacity
+                        key={it.value}
+                        onPress={() => handleSetCidadeOrigem(it.value)}
+                        style={styles.suggestionItem}
+                      >
+                        <Text style={styles.suggestionText}>{it.label}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                ) : null
+              ) : null
+            );
+          })()
+        }
 
         {/* Origem - Bairro */}
         {perguntarBairro && (
@@ -840,31 +956,45 @@ export default function Pesquisa() {
           }}
           style={styles.input}
         >
+          <Picker.Item label="Selecione a UF" value="" />
           {estadosCidades.estados.map((estado) => (
             <Picker.Item key={estado.sigla} label={estado.nome} value={estado.sigla} />
           ))}
         </Picker>
 
         <Text style={styles.label}>Destino - Cidade:</Text>
-        <DropDownPicker
-          open={openDestino}
-          value={cidadeDestinoValue}
-          items={cidadesDestinoItems}
-          setOpen={setOpenDestino}
-          setValue={val => {
-            setCidadeDestinoValue(val());
-            setDestinoCidade(val());
-          }}
-          setItems={setCidadesDestinoItems}
-          placeholder="Selecione a cidade"
-          searchable={true}
-          searchPlaceholder="Filtrar cidade..."
-          style={styles.input}
-          containerStyle={{ marginBottom: 16, width: '90%', alignSelf: 'center' }}
-          zIndex={1000}
-          textStyle={styles.dropDownText}
-          labelStyle={styles.dropDownText}
+        <TextInput
+          style={[styles.input, { marginBottom: 8 }]}
+          value={cidadeBuscaDestino}
+          onChangeText={setCidadeBuscaDestino}
+          onFocus={() => setOpenDestino(true)}
+          placeholder="Buscar cidade (sem acento funciona)"
+          placeholderTextColor="#666"
         />
+        {
+          (() => {
+            const filtered = cidadesDestinoItems.filter(it =>
+              removerAcentos(it.label.toLowerCase()).includes(removerAcentos(cidadeBuscaDestino.toLowerCase()))
+            );
+            return (
+              openDestino ? (
+                filtered.length > 0 ? (
+                  <View style={styles.suggestionContainer}>
+                    {filtered.map((it) => (
+                      <TouchableOpacity
+                        key={it.value}
+                        onPress={() => handleSetCidadeDestino(it.value)}
+                        style={styles.suggestionItem}
+                      >
+                        <Text style={styles.suggestionText}>{it.label}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                ) : null
+              ) : null
+            );
+          })()
+        }
 
         {/* Destino - Bairro */}
         {perguntarBairro && (
@@ -886,6 +1016,7 @@ export default function Pesquisa() {
           onValueChange={setOcupacao}
           style={styles.input}
         >
+          <Picker.Item label="Selecione a ocupação" value="" />
           {ocupantesOptions.map((num) => (
             <Picker.Item key={num} label={num} value={num} />
           ))}
@@ -897,6 +1028,7 @@ export default function Pesquisa() {
           onValueChange={setFrequencia}
           style={styles.input}
         >
+          <Picker.Item label="Selecione a frequência" value="" />
           {frequencias.map((item) => (
             <Picker.Item key={item} label={item} value={item} />
           ))}
@@ -908,6 +1040,7 @@ export default function Pesquisa() {
           onValueChange={setRendaFamiliar}
           style={styles.input}
         >
+          <Picker.Item label="Selecione a renda" value="" />
           {rendas.map((item) => (
             <Picker.Item key={item} label={item} value={item} />
           ))}
@@ -919,6 +1052,7 @@ export default function Pesquisa() {
           onValueChange={setMotivoViagem}
           style={styles.input}
         >
+          <Picker.Item label="Selecione o motivo" value="" />
           {motivosViagem.map((item) => (
             <Picker.Item key={item} label={item} value={item} />
           ))}
@@ -942,12 +1076,28 @@ export default function Pesquisa() {
               title="Salvar Pesquisa"
               color="#021b36ff"
               onPress={async () => {
-                // Validação dos campos de bairro
+                // Validação dos campos obrigatórios (todas as perguntas devem ser respondidas)
+                const obrigatorios = [
+                  tipoVeiculo,
+                  origemUf,
+                  origemCidade,
+                  destinoUf,
+                  destinoCidade,
+                  ocupacao,
+                  frequencia,
+                  rendaFamiliar,
+                  motivoViagem
+                ];
                 if (perguntarBairro) {
-                  if (!origemBairro.trim() || !destinoBairro.trim()) {
-                    Alert.alert("Preencha o bairro de origem e destino!");
-                    return;
-                  }
+                  obrigatorios.push(origemBairro, destinoBairro);
+                }
+                if (motivoViagem.startsWith("Outros")) {
+                  obrigatorios.push(motivoViagemOutro);
+                }
+                const algumVazio = obrigatorios.some(v => !v || (typeof v === "string" && v.trim() === ""));
+                if (algumVazio) {
+                  Alert.alert("Preencha todas as perguntas obrigatórias!");
+                  return;
                 }
                 const dados = {
                   id: gerarUUID(),
@@ -997,6 +1147,18 @@ export default function Pesquisa() {
       <View style={styles.container}>
         <Text style={styles.title}>Selecione o tipo de ônibus</Text>
         <ScrollView style={{ width: "100%", maxHeight: 400 }}>
+          {/* Adiciona botão "Selecione o tipo de ônibus" */}
+          <TouchableOpacity
+            key=""
+            style={[
+              styles.tipoVeiculoButton,
+              tipoOnibus === "" ? styles.tipoVeiculoButtonSelecionado : null,
+              { width: "96%", alignSelf: "center", marginVertical: 4, flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 8 }
+            ]}
+            onPress={() => setTipoOnibus("")}
+          >
+            <Text style={styles.tipoVeiculoTexto}>Selecione o tipo de ônibus</Text>
+          </TouchableOpacity>
           {tiposOnibus.map((tipo) => {
             const selecionado = tipoOnibus === tipo.valor;
             return (
@@ -1061,31 +1223,42 @@ export default function Pesquisa() {
           }}
           style={styles.input}
         >
+          <Picker.Item label="Selecione a UF" value="" />
           {estadosCidades.estados.map((estado) => (
             <Picker.Item key={estado.sigla} label={estado.nome} value={estado.sigla} />
           ))}
         </Picker>
 
-                <Text style={styles.label}>Origem - Cidade:</Text>
-        <DropDownPicker
-          open={openOrigem}
-          value={cidadeOrigemValue}
-          items={cidadesOrigemItems}
-          setOpen={setOpenOrigem}
-          setValue={val => {
-            setCidadeOrigemValue(val());
-            setOrigemCidade(val());
-          }}
-          setItems={setCidadesOrigemItems}
-          placeholder="Selecione a cidade"
-          searchable={true}
-          searchPlaceholder="Filtrar cidade..."
-          style={styles.input}
-          containerStyle={{ marginBottom: 16, width: '90%', alignSelf: 'center' }}
-          zIndex={2000}
-          textStyle={styles.dropDownText}
-          labelStyle={styles.dropDownText}
+        <Text style={styles.label}>Origem - Cidade:</Text>
+        <TextInput
+          style={[styles.input, { marginBottom: 8 }]}
+          value={cidadeBuscaOrigem}
+          onChangeText={setCidadeBuscaOrigem}
+          placeholder="Buscar cidade (sem acento funciona)"
+          placeholderTextColor="#666"
         />
+        {
+          (() => {
+            const filtered = cidadesOrigemItems.filter(it =>
+              removerAcentos(it.label.toLowerCase()).includes(removerAcentos(cidadeBuscaOrigem.toLowerCase()))
+            );
+            return (
+              filtered.length > 0 ? (
+                <View style={styles.suggestionContainer}>
+                  {filtered.map((it) => (
+                    <TouchableOpacity
+                      key={it.value}
+                      onPress={() => handleSetCidadeOrigem(it.value)}
+                      style={styles.suggestionItem}
+                    >
+                      <Text style={styles.suggestionText}>{it.label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              ) : null
+            );
+          })()
+        }
 
         {/* Origem - Bairro */}
         {perguntarBairro && (
@@ -1110,31 +1283,42 @@ export default function Pesquisa() {
           }}
           style={styles.input}
         >
+          <Picker.Item label="Selecione a UF" value="" />
           {estadosCidades.estados.map((estado) => (
             <Picker.Item key={estado.sigla} label={estado.nome} value={estado.sigla} />
           ))}
         </Picker>
 
         <Text style={styles.label}>Destino - Cidade:</Text>
-        <DropDownPicker
-          open={openDestino}
-          value={cidadeDestinoValue}
-          items={cidadesDestinoItems}
-          setOpen={setOpenDestino}
-          setValue={val => {
-            setCidadeDestinoValue(val());
-            setDestinoCidade(val());
-          }}
-          setItems={setCidadesDestinoItems}
-          placeholder="Selecione a cidade"
-          searchable={true}
-          searchPlaceholder="Filtrar cidade..."
-          style={styles.input}
-          containerStyle={{ marginBottom: 16, width: '90%', alignSelf: 'center' }}
-          zIndex={1000}
-          textStyle={styles.dropDownText}
-          labelStyle={styles.dropDownText}
+        <TextInput
+          style={[styles.input, { marginBottom: 8 }]}
+          value={cidadeBuscaDestino}
+          onChangeText={setCidadeBuscaDestino}
+          placeholder="Buscar cidade (sem acento funciona)"
+          placeholderTextColor="#666"
         />
+        {
+          (() => {
+            const filtered = cidadesDestinoItems.filter(it =>
+              removerAcentos(it.label.toLowerCase()).includes(removerAcentos(cidadeBuscaDestino.toLowerCase()))
+            );
+            return (
+              filtered.length > 0 ? (
+                <View style={styles.suggestionContainer}>
+                  {filtered.map((it) => (
+                    <TouchableOpacity
+                      key={it.value}
+                      onPress={() => handleSetCidadeDestino(it.value)}
+                      style={styles.suggestionItem}
+                    >
+                      <Text style={styles.suggestionText}>{it.label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              ) : null
+            );
+          })()
+        }
 
         {/* Destino - Bairro */}
         {perguntarBairro && (
@@ -1156,6 +1340,7 @@ export default function Pesquisa() {
           onValueChange={setFrequencia}
           style={styles.input}
         >
+          <Picker.Item label="Selecione a frequência" value="" />
           {frequencias.map((item) => (
             <Picker.Item key={item} label={item} value={item} />
           ))}
@@ -1170,12 +1355,22 @@ export default function Pesquisa() {
               title="Salvar Pesquisa"
               color="#021b36ff"
               onPress={async () => {
-                // Validação dos campos de bairro
+                // Validação dos campos obrigatórios (todas as perguntas devem ser respondidas)
+                const obrigatorios = [
+                  tipoOnibus,
+                  origemUf,
+                  origemCidade,
+                  destinoUf,
+                  destinoCidade,
+                  frequencia
+                ];
                 if (perguntarBairro) {
-                  if (!origemBairro.trim() || !destinoBairro.trim()) {
-                    Alert.alert("Preencha o bairro de origem e destino!");
-                    return;
-                  }
+                  obrigatorios.push(origemBairro, destinoBairro);
+                }
+                const algumVazio = obrigatorios.some(v => !v || (typeof v === "string" && v.trim() === ""));
+                if (algumVazio) {
+                  Alert.alert("Preencha todas as perguntas obrigatórias!");
+                  return;
                 }
                 const dados = {
                   id: gerarUUID(),
@@ -1210,7 +1405,6 @@ export default function Pesquisa() {
                 router.replace('/');
               }}
             />
-            />
           </View>
         </View>
       </ScrollView>
@@ -1234,13 +1428,13 @@ const  styles = StyleSheet.create({
     alignItems: "center",
   },
   title: {
-    fontSize: 26, // aumente aqui
+    fontSize: 22,
     fontWeight: "bold",
     marginBottom: 18,
     textAlign: "center",
   },
   label: {
-    fontSize: 20, // aumente aqui
+    fontSize: 17,
     marginBottom: 4,
     fontWeight: "bold",
     alignSelf: "flex-start",
@@ -1252,7 +1446,7 @@ const  styles = StyleSheet.create({
     borderRadius: 8,
     padding: 10,
     marginBottom: 12,
-    fontSize: 22, // <-- aumente aqui (ex: 22 ou 24)
+    fontSize: 16,
     backgroundColor: "#e6ecf2",
     width: "90%",
     minWidth: 200,
@@ -1285,19 +1479,41 @@ const  styles = StyleSheet.create({
   marginBottom: 2,
   },
   tipoVeiculoTexto: {
-    fontSize: 16, // maior
+    fontSize: 16,
     fontWeight: "bold",
   },
   tipoVeiculoSelecionado: {
-    fontSize: 18, // maior
+    fontSize: 18,
     fontWeight: "bold",
     color: "#021b36ff",
     marginBottom: 12,
     alignSelf: "center",
   },
   dropDownText: {
-    fontSize: 18, // ou maior, se preferir
+    fontSize: 16,
     color: "#222",
+  },
+  suggestionContainer: {
+    width: '90%',
+    maxHeight: 220,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    backgroundColor: '#fff',
+    alignSelf: 'center',
+    borderRadius: 8,
+    marginBottom: 12,
+    overflow: 'hidden',
+  },
+  suggestionItem: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    backgroundColor: '#f9f9f9',
+  },
+  suggestionText: {
+    fontSize: 16,
+    color: '#222',
   },
 });
 
@@ -1324,3 +1540,4 @@ function getChaveClasse(nomeClasse) {
 }
 
 export { sincronizarPesquisasPendentes };
+
