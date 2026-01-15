@@ -1,8 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Picker } from "@react-native-picker/picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useRef, useState } from "react";
-import { Alert, Button, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { useEffect, useState } from "react";
+import { Alert, Button, Image, Keyboard, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import estadosCidades from "../../assets/estados-cidades.json";
 
 function removerAcentos(str: string) {
@@ -269,30 +269,32 @@ export default function Pesquisa() {
   // Compatibilizadores para DropDownPicker: alguns lançam um callback, outros o valor diretamente.
   const handleSetCidadeOrigem = (v: any) => {
     const value = typeof v === 'function' ? v() : v;
+    Keyboard.dismiss();
     setCidadeOrigemValue(value);
     setOrigemCidade(value);
-    // set search and close, but suppress auto-open for the immediate update
-    suppressOpenOrigemRef.current = true;
     setCidadeBuscaOrigem(value);
     setOpenOrigem(false);
   };
 
   const handleSetCidadeDestino = (v: any) => {
     const value = typeof v === 'function' ? v() : v;
+    Keyboard.dismiss();
     setCidadeDestinoValue(value);
     setDestinoCidade(value);
-    // set search and close, but suppress auto-open for the immediate update
-    suppressOpenDestinoRef.current = true;
     setCidadeBuscaDestino(value);
     setOpenDestino(false);
   };
 
-  // refs to suppress auto-open immediately after selection
-  const suppressOpenOrigemRef = useRef(false);
-  const suppressOpenDestinoRef = useRef(false);
-  // timer refs for debouncing auto-open while typing
-  const openTimerOrigemRef = useRef<any>(null);
-  const openTimerDestinoRef = useRef<any>(null);
+  // Abre sugestões imediatamente ao digitar se não houver uma seleção válida
+  useEffect(() => {
+    const shouldOpen = !!cidadeBuscaOrigem && cidadeBuscaOrigem !== origemCidade;
+    setOpenOrigem(shouldOpen);
+  }, [cidadeBuscaOrigem, origemCidade]);
+
+  useEffect(() => {
+    const shouldOpen = !!cidadeBuscaDestino && cidadeBuscaDestino !== destinoCidade;
+    setOpenDestino(shouldOpen);
+  }, [cidadeBuscaDestino, destinoCidade]);
 
   useEffect(() => {
     AsyncStorage.getItem("respostasFixas").then(str => {
@@ -326,22 +328,8 @@ export default function Pesquisa() {
     );
     setCidadeOrigemValue("");
     setOrigemCidade("");
+    setCidadeBuscaOrigem("");
   }, [origemUf]);
-
-  // Auto-open suggestions while typing (debounced), but don't reopen immediately after a selection
-  useEffect(() => {
-    if (openTimerOrigemRef.current) clearTimeout(openTimerOrigemRef.current);
-    openTimerOrigemRef.current = setTimeout(() => {
-      if (suppressOpenOrigemRef.current) {
-        suppressOpenOrigemRef.current = false;
-        return;
-      }
-      if (cidadeBuscaOrigem && !openOrigem) setOpenOrigem(true);
-    }, 220);
-    return () => {
-      if (openTimerOrigemRef.current) clearTimeout(openTimerOrigemRef.current);
-    };
-  }, [cidadeBuscaOrigem]);
 
   useEffect(() => {
     setCidadesDestinoItems(
@@ -349,21 +337,8 @@ export default function Pesquisa() {
     );
     setCidadeDestinoValue("");
     setDestinoCidade("");
+    setCidadeBuscaDestino("");
   }, [destinoUf]);
-
-  useEffect(() => {
-    if (openTimerDestinoRef.current) clearTimeout(openTimerDestinoRef.current);
-    openTimerDestinoRef.current = setTimeout(() => {
-      if (suppressOpenDestinoRef.current) {
-        suppressOpenDestinoRef.current = false;
-        return;
-      }
-      if (cidadeBuscaDestino && !openDestino) setOpenDestino(true);
-    }, 220);
-    return () => {
-      if (openTimerDestinoRef.current) clearTimeout(openTimerDestinoRef.current);
-    };
-  }, [cidadeBuscaDestino]);
 
   // Função para salvar pesquisa localmente
   const salvarPesquisaLocal = async (dadosComFixas) => {
@@ -456,7 +431,6 @@ export default function Pesquisa() {
 
     // Limites e cálculo de capacidade dinamicamente exibida
     const classeLimites = limitesPorClasse[classeCaminhao];
-    const [taraMin, taraMax] = getLimitesTara(classeCaminhao);
     const pesoBrutoNumDisplay = Number(pesoBruto);
     const taraNumDisplay = Number(tara);
     const capacidadeDisponivel = (!isNaN(pesoBrutoNumDisplay) && !isNaN(taraNumDisplay))
@@ -464,7 +438,7 @@ export default function Pesquisa() {
       : null;
 
     return (
-      <ScrollView contentContainerStyle={[styles.container, { paddingBottom: 48 }]}>
+      <ScrollView contentContainerStyle={[styles.container, { paddingBottom: 48 }]} keyboardShouldPersistTaps="always">
         <Text style={styles.title}>Pesquisa OD - Caminhão</Text>
         <Text style={styles.label}>Classe selecionada:</Text>
         <Text style={styles.tipoVeiculoSelecionado}>{classeCaminhao}</Text>
@@ -492,33 +466,50 @@ export default function Pesquisa() {
 
         <Text style={styles.label}>Origem - Cidade:</Text>
         <TextInput
-          style={[styles.input, { marginBottom: 8 }]}
+          style={[
+            styles.input,
+            { marginBottom: 8 },
+            !origemCidade && cidadeBuscaOrigem ? { borderColor: 'red', borderWidth: 2 } : {}
+          ]}
           value={cidadeBuscaOrigem}
-          onChangeText={setCidadeBuscaOrigem}
+          onChangeText={(text) => {
+            setCidadeBuscaOrigem(text);
+            if (text !== origemCidade) setOrigemCidade("");
+          }}
           onFocus={() => setOpenOrigem(true)}
+          onBlur={() => {}}
           placeholder="Buscar cidade — selecione na lista"
           placeholderTextColor="#666"
         />
+        {!origemCidade && cidadeBuscaOrigem && (
+          <Text style={styles.errorText}>Selecione uma cidade da lista</Text>
+        )}
         {
           (() => {
             const filtered = cidadesOrigemItems.filter(it =>
               removerAcentos(it.label.toLowerCase()).includes(removerAcentos(cidadeBuscaOrigem.toLowerCase()))
             );
             return (
-              openOrigem ? (
+              openOrigem && cidadeBuscaOrigem ? (
                 filtered.length > 0 ? (
                   <View style={styles.suggestionContainer}>
-                    {filtered.map((it) => (
-                      <TouchableOpacity
-                        key={it.value}
-                        onPress={() => handleSetCidadeOrigem(it.value)}
-                        style={styles.suggestionItem}
-                      >
-                        <Text style={styles.suggestionText}>{it.label}</Text>
-                      </TouchableOpacity>
-                    ))}
+                    <ScrollView style={{ maxHeight: 200 }} keyboardShouldPersistTaps="always">
+                      {filtered.map((it) => (
+                        <TouchableOpacity
+                          key={it.value}
+                          onPress={() => handleSetCidadeOrigem(it.value)}
+                          style={styles.suggestionItem}
+                        >
+                          <Text style={styles.suggestionText}>{it.label}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
                   </View>
-                ) : null
+                ) : (
+                  <View style={[styles.suggestionContainer, { padding: 12 }]}> 
+                    <Text style={{ color: '#666' }}>Nenhuma cidade encontrada</Text>
+                  </View>
+                )
               ) : null
             );
           })()
@@ -555,33 +546,50 @@ export default function Pesquisa() {
 
         <Text style={styles.label}>Destino - Cidade:</Text>
         <TextInput
-          style={[styles.input, { marginBottom: 8 }]}
+          style={[
+            styles.input,
+            { marginBottom: 8 },
+            !destinoCidade && cidadeBuscaDestino ? { borderColor: 'red', borderWidth: 2 } : {}
+          ]}
           value={cidadeBuscaDestino}
-          onChangeText={setCidadeBuscaDestino}
+          onChangeText={(text) => {
+            setCidadeBuscaDestino(text);
+            if (text !== destinoCidade) setDestinoCidade("");
+          }}
           onFocus={() => setOpenDestino(true)}
-          placeholder="Buscar cidade (sem acento funciona) — selecione na lista"
+          onBlur={() => {}}
+          placeholder="Buscar cidade — selecione na lista"
           placeholderTextColor="#666"
         />
+        {!destinoCidade && cidadeBuscaDestino && (
+          <Text style={styles.errorText}>Selecione uma cidade da lista</Text>
+        )}
         {
           (() => {
             const filtered = cidadesDestinoItems.filter(it =>
               removerAcentos(it.label.toLowerCase()).includes(removerAcentos(cidadeBuscaDestino.toLowerCase()))
             );
             return (
-              openDestino ? (
+              openDestino && cidadeBuscaDestino ? (
                 filtered.length > 0 ? (
                   <View style={styles.suggestionContainer}>
-                    {filtered.map((it) => (
-                      <TouchableOpacity
-                        key={it.value}
-                        onPress={() => handleSetCidadeDestino(it.value)}
-                        style={styles.suggestionItem}
-                      >
-                        <Text style={styles.suggestionText}>{it.label}</Text>
-                      </TouchableOpacity>
-                    ))}
+                    <ScrollView style={{ maxHeight: 200 }} keyboardShouldPersistTaps="always">
+                      {filtered.map((it) => (
+                        <TouchableOpacity
+                          key={it.value}
+                          onPress={() => handleSetCidadeDestino(it.value)}
+                          style={styles.suggestionItem}
+                        >
+                          <Text style={styles.suggestionText}>{it.label}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
                   </View>
-                ) : null
+                ) : (
+                  <View style={[styles.suggestionContainer, { padding: 12 }]}> 
+                    <Text style={{ color: '#666' }}>Nenhuma cidade encontrada</Text>
+                  </View>
+                )
               ) : null
             );
           })()
@@ -658,7 +666,7 @@ export default function Pesquisa() {
           <Picker.Item label="Não" value="Não" />
         </Picker>
 
-        <Text style={styles.label}>Peso bruto do veículo (toneladas):</Text>
+        <Text style={styles.label}>Peso bruto do veículo em toneladas (Peso do veículo + capacidade):</Text>
         <TextInput
           style={styles.input}
           value={pesoBruto}
@@ -668,7 +676,7 @@ export default function Pesquisa() {
           placeholderTextColor="#888"
         />
 
-        <Text style={styles.label}>Tara (toneladas):</Text>
+        <Text style={styles.label}>Tara em toneladas (tara do conjunto - veículo vazio):</Text>
         <TextInput
           style={styles.input}
           value={tara}
@@ -678,7 +686,7 @@ export default function Pesquisa() {
           placeholderTextColor="#888"
         />
 
-        <Text style={styles.label}>Peso da Carga (toneladas):</Text>
+        <Text style={styles.label}>Peso da Carga em toneladas:</Text>
         {capacidadeDisponivel !== null && (
           <Text style={{ alignSelf: 'flex-start', marginLeft: '5%', marginBottom: 6, color: '#444' }}>
             Capacidade disponível: {capacidadeDisponivel} t (intervalo 0–{capacidadeDisponivel} t)
@@ -788,7 +796,6 @@ export default function Pesquisa() {
 
                 // Limites por classe
                 const classeLimites = limitesPorClasse[classeCaminhao];
-                const [taraMin, taraMax] = getLimitesTara(classeCaminhao);
 
                 if (!classeLimites) {
                   Alert.alert("Classe de caminhão inválida.");
@@ -815,10 +822,6 @@ export default function Pesquisa() {
                   return;
                 }
 
-                if (taraNum < taraMin || taraNum > taraMax) {
-                  Alert.alert(`Tara fora dos limites para a classe selecionada (${taraMin}–${taraMax}t).`);
-                  return;
-                }
 
                 const capacidade = pesoBrutoNum - taraNum;
                 if (capacidade < 0) {
@@ -935,7 +938,7 @@ export default function Pesquisa() {
     const maxOcupantes = maxOcupantesPorTipo[tipoVeiculo] || 7;
     const ocupantesOptions = Array.from({ length: maxOcupantes }, (_, i) => String(i + 1));
     return (
-      <ScrollView contentContainerStyle={[styles.container, { paddingBottom: 48 }]}>
+      <ScrollView contentContainerStyle={[styles.container, { paddingBottom: 48 }]} keyboardShouldPersistTaps="always">
         <Text style={styles.title}>Pesquisa OD - {tipoVeiculo}</Text>
         <Text style={styles.label}>Tipo de veículo selecionado:</Text>
         <Text style={styles.tipoVeiculoSelecionado}>{tipoVeiculo}</Text>
@@ -957,40 +960,50 @@ export default function Pesquisa() {
 
         <Text style={styles.label}>Origem - Cidade:</Text>
         <TextInput
-          style={[styles.input, { marginBottom: 8 }]}
+          style={[
+            styles.input,
+            { marginBottom: 8 },
+            !origemCidade && cidadeBuscaOrigem ? { borderColor: 'red', borderWidth: 2 } : {}
+          ]}
           value={cidadeBuscaOrigem}
-          onChangeText={setCidadeBuscaOrigem}
-          onFocus={() => setOpenOrigem(true)}
-          onBlur={() => {
-            // Delay revert so suggestion click can run first (fixes web ordering)
-            setTimeout(() => {
-              if (cidadeBuscaOrigem !== origemCidade) setCidadeBuscaOrigem(origemCidade);
-              setOpenOrigem(false);
-            }, 150);
+          onChangeText={(text) => {
+            setCidadeBuscaOrigem(text);
+            if (text !== origemCidade) setOrigemCidade("");
           }}
-          placeholder="Buscar cidade (sem acento funciona)"
+          onFocus={() => setOpenOrigem(true)}
+          onBlur={() => {}}
+          placeholder="Buscar cidade (sem acento funciona) — selecione na lista"
           placeholderTextColor="#666"
         />
+        {!origemCidade && cidadeBuscaOrigem && (
+          <Text style={styles.errorText}>Selecione uma cidade da lista</Text>
+        )}
         {
           (() => {
             const filtered = cidadesOrigemItems.filter(it =>
               removerAcentos(it.label.toLowerCase()).includes(removerAcentos(cidadeBuscaOrigem.toLowerCase()))
             );
             return (
-              openOrigem ? (
+              openOrigem && cidadeBuscaOrigem ? (
                 filtered.length > 0 ? (
                   <View style={styles.suggestionContainer}>
-                    {filtered.map((it) => (
-                      <TouchableOpacity
-                        key={it.value}
-                        onPress={() => handleSetCidadeOrigem(it.value)}
-                        style={styles.suggestionItem}
-                      >
-                        <Text style={styles.suggestionText}>{it.label}</Text>
-                      </TouchableOpacity>
-                    ))}
+                    <ScrollView style={{ maxHeight: 200 }} keyboardShouldPersistTaps="always">
+                      {filtered.map((it) => (
+                        <TouchableOpacity
+                          key={it.value}
+                          onPress={() => handleSetCidadeOrigem(it.value)}
+                          style={styles.suggestionItem}
+                        >
+                          <Text style={styles.suggestionText}>{it.label}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
                   </View>
-                ) : null
+                ) : (
+                  <View style={[styles.suggestionContainer, { padding: 12 }]}> 
+                    <Text style={{ color: '#666' }}>Nenhuma cidade encontrada</Text>
+                  </View>
+                )
               ) : null
             );
           })()
@@ -1027,40 +1040,50 @@ export default function Pesquisa() {
 
         <Text style={styles.label}>Destino - Cidade:</Text>
         <TextInput
-          style={[styles.input, { marginBottom: 8 }]}
+          style={[
+            styles.input,
+            { marginBottom: 8 },
+            !destinoCidade && cidadeBuscaDestino ? { borderColor: 'red', borderWidth: 2 } : {}
+          ]}
           value={cidadeBuscaDestino}
-          onChangeText={setCidadeBuscaDestino}
-          onFocus={() => setOpenDestino(true)}
-          onBlur={() => {
-            // Delay revert so suggestion click can run first (fixes web ordering)
-            setTimeout(() => {
-              if (cidadeBuscaDestino !== destinoCidade) setCidadeBuscaDestino(destinoCidade);
-              setOpenDestino(false);
-            }, 150);
+          onChangeText={(text) => {
+            setCidadeBuscaDestino(text);
+            if (text !== destinoCidade) setDestinoCidade("");
           }}
-          placeholder="Buscar cidade (sem acento funciona)"
+          onFocus={() => setOpenDestino(true)}
+          onBlur={() => {}}
+          placeholder="Buscar cidade (sem acento funciona) — selecione na lista"
           placeholderTextColor="#666"
         />
+        {!destinoCidade && cidadeBuscaDestino && (
+          <Text style={styles.errorText}>Selecione uma cidade da lista</Text>
+        )}
         {
           (() => {
             const filtered = cidadesDestinoItems.filter(it =>
               removerAcentos(it.label.toLowerCase()).includes(removerAcentos(cidadeBuscaDestino.toLowerCase()))
             );
             return (
-              openDestino ? (
+              openDestino && cidadeBuscaDestino ? (
                 filtered.length > 0 ? (
                   <View style={styles.suggestionContainer}>
-                    {filtered.map((it) => (
-                      <TouchableOpacity
-                        key={it.value}
-                        onPress={() => handleSetCidadeDestino(it.value)}
-                        style={styles.suggestionItem}
-                      >
-                        <Text style={styles.suggestionText}>{it.label}</Text>
-                      </TouchableOpacity>
-                    ))}
+                    <ScrollView style={{ maxHeight: 200 }} keyboardShouldPersistTaps="always">
+                      {filtered.map((it) => (
+                        <TouchableOpacity
+                          key={it.value}
+                          onPress={() => handleSetCidadeDestino(it.value)}
+                          style={styles.suggestionItem}
+                        >
+                          <Text style={styles.suggestionText}>{it.label}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
                   </View>
-                ) : null
+                ) : (
+                  <View style={[styles.suggestionContainer, { padding: 12 }]}> 
+                    <Text style={{ color: '#666' }}>Nenhuma cidade encontrada</Text>
+                  </View>
+                )
               ) : null
             );
           })()
@@ -1284,7 +1307,7 @@ export default function Pesquisa() {
     const cidadesDestino = getCidadesPorUf(destinoUf);
 
     return (
-      <ScrollView contentContainerStyle={[styles.container, { paddingBottom: 48 }]}>
+      <ScrollView contentContainerStyle={[styles.container, { paddingBottom: 48 }]} keyboardShouldPersistTaps="always">
         <Text style={styles.title}>Pesquisa OD - Ônibus</Text>
         <Text style={styles.label}>Tipo de ônibus selecionado:</Text>
         <Text style={styles.tipoVeiculoSelecionado}>
@@ -1308,38 +1331,50 @@ export default function Pesquisa() {
 
         <Text style={styles.label}>Origem - Cidade:</Text>
         <TextInput
-          style={[styles.input, { marginBottom: 8 }]}
+          style={[
+            styles.input,
+            { marginBottom: 8 },
+            !origemCidade && cidadeBuscaOrigem ? { borderColor: 'red', borderWidth: 2 } : {}
+          ]}
           value={cidadeBuscaOrigem}
-          onChangeText={setCidadeBuscaOrigem}
-          onFocus={() => setOpenOrigem(true)}
-          onBlur={() => {
-            // Delay revert so suggestion click can run first (fixes web ordering)
-            setTimeout(() => {
-              if (cidadeBuscaOrigem !== origemCidade) setCidadeBuscaOrigem(origemCidade);
-              setOpenOrigem(false);
-            }, 150);
+          onChangeText={(text) => {
+            setCidadeBuscaOrigem(text);
+            if (text !== origemCidade) setOrigemCidade("");
           }}
-          placeholder="Buscar cidade (sem acento funciona)"
+          onFocus={() => setOpenOrigem(true)}
+          onBlur={() => {}}
+          placeholder="Buscar cidade (sem acento funciona) — selecione na lista"
           placeholderTextColor="#666"
         />
+        {!origemCidade && cidadeBuscaOrigem && (
+          <Text style={styles.errorText}>Selecione uma cidade da lista</Text>
+        )}
         {
           (() => {
             const filtered = cidadesOrigemItems.filter(it =>
               removerAcentos(it.label.toLowerCase()).includes(removerAcentos(cidadeBuscaOrigem.toLowerCase()))
             );
             return (
-              filtered.length > 0 ? (
-                <View style={styles.suggestionContainer}>
-                  {filtered.map((it) => (
-                    <TouchableOpacity
-                      key={it.value}
-                      onPress={() => handleSetCidadeOrigem(it.value)}
-                      style={styles.suggestionItem}
-                    >
-                      <Text style={styles.suggestionText}>{it.label}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
+              openOrigem && cidadeBuscaOrigem ? (
+                filtered.length > 0 ? (
+                  <View style={styles.suggestionContainer}>
+                    <ScrollView style={{ maxHeight: 200 }} keyboardShouldPersistTaps="always">
+                      {filtered.map((it) => (
+                        <TouchableOpacity
+                          key={it.value}
+                          onPress={() => handleSetCidadeOrigem(it.value)}
+                          style={styles.suggestionItem}
+                        >
+                          <Text style={styles.suggestionText}>{it.label}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
+                ) : (
+                  <View style={[styles.suggestionContainer, { padding: 12 }]}> 
+                    <Text style={{ color: '#666' }}>Nenhuma cidade encontrada</Text>
+                  </View>
+                )
               ) : null
             );
           })()
@@ -1376,30 +1411,50 @@ export default function Pesquisa() {
 
         <Text style={styles.label}>Destino - Cidade:</Text>
         <TextInput
-          style={[styles.input, { marginBottom: 8 }]}
+          style={[
+            styles.input,
+            { marginBottom: 8 },
+            !destinoCidade && cidadeBuscaDestino ? { borderColor: 'red', borderWidth: 2 } : {}
+          ]}
           value={cidadeBuscaDestino}
-          onChangeText={setCidadeBuscaDestino}
-          placeholder="Buscar cidade (sem acento funciona)"
+          onChangeText={(text) => {
+            setCidadeBuscaDestino(text);
+            if (text !== destinoCidade) setDestinoCidade("");
+          }}
+          onFocus={() => setOpenDestino(true)}
+          onBlur={() => {}}
+          placeholder="Buscar cidade (sem acento funciona) — selecione na lista"
           placeholderTextColor="#666"
         />
+        {!destinoCidade && cidadeBuscaDestino && (
+          <Text style={styles.errorText}>Selecione uma cidade da lista</Text>
+        )}
         {
           (() => {
             const filtered = cidadesDestinoItems.filter(it =>
               removerAcentos(it.label.toLowerCase()).includes(removerAcentos(cidadeBuscaDestino.toLowerCase()))
             );
             return (
-              filtered.length > 0 ? (
-                <View style={styles.suggestionContainer}>
-                  {filtered.map((it) => (
-                    <TouchableOpacity
-                      key={it.value}
-                      onPress={() => handleSetCidadeDestino(it.value)}
-                      style={styles.suggestionItem}
-                    >
-                      <Text style={styles.suggestionText}>{it.label}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
+              openDestino && cidadeBuscaDestino ? (
+                filtered.length > 0 ? (
+                  <View style={styles.suggestionContainer}>
+                    <ScrollView style={{ maxHeight: 200 }} keyboardShouldPersistTaps="always">
+                      {filtered.map((it) => (
+                        <TouchableOpacity
+                          key={it.value}
+                          onPress={() => handleSetCidadeDestino(it.value)}
+                          style={styles.suggestionItem}
+                        >
+                          <Text style={styles.suggestionText}>{it.label}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
+                ) : (
+                  <View style={[styles.suggestionContainer, { padding: 12 }]}> 
+                    <Text style={{ color: '#666' }}>Nenhuma cidade encontrada</Text>
+                  </View>
+                )
               ) : null
             );
           })()
@@ -1599,6 +1654,14 @@ const  styles = StyleSheet.create({
   suggestionText: {
     fontSize: 16,
     color: '#222',
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 14,
+    marginTop: -8,
+    marginBottom: 8,
+    marginLeft: '5%',
+    fontWeight: '600',
   },
 });
 
