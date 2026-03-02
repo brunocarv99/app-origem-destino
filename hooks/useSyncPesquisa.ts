@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
 import { useEffect, useRef } from 'react';
 
-const API_URL = 'https://pesquisaod.onrender.com/pesquisas';
+const API_URL = 'https://backend-app-pgrx.onrender.com/pesquisas';
 
 export function useSyncPesquisa() {
   const syncInProgress = useRef(false);
@@ -16,19 +16,24 @@ export function useSyncPesquisa() {
       
       if (pesquisasSalvas) {
         const pesquisas = JSON.parse(pesquisasSalvas);
-        const naoEnviadas = pesquisas.filter(p => !p.jaEnviado);
+        const naoEnviadas = pesquisas.filter(p => !p.enviada);
         
         for (const pesquisa of naoEnviadas) {
           try {
-            await fetch(API_URL, {
+            const response = await fetch(API_URL, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
               },
               body: JSON.stringify(pesquisa)
             });
-            
-            pesquisa.jaEnviado = true;
+
+            if (!response.ok) {
+              console.error('Falha ao enviar pesquisa. Status:', response.status);
+              continue;
+            }
+
+            pesquisa.enviada = true;
           } catch (error) {
             console.error('Erro ao enviar pesquisa:', error);
           }

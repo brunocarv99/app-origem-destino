@@ -17,7 +17,7 @@ const SENHA_FIXA = "@trafego25";
 
 export default function ConfiguracaoScreen({ requirePassword = true }: { requirePassword?: boolean }) {
         // Função para salvar configuração
-    function salvarConfiguracao() {
+    async function salvarConfiguracao() {
       if (!pesquisador || !rodovia || !posto || !data || !sentidoDe || !sentidoPara) {
         Alert.alert('Erro', 'Preencha todos os campos obrigatórios.');
         return;
@@ -32,7 +32,18 @@ export default function ConfiguracaoScreen({ requirePassword = true }: { require
         perguntarBairro,
       };
       setConfigSalva(novaConfig);
-      AsyncStorage.setItem('configuracao', JSON.stringify(novaConfig));
+      await AsyncStorage.setItem('configuracao', JSON.stringify(novaConfig));
+      // Também salva respostasFixas para uso na pesquisa
+      const respostasFixas = {
+        perguntarBairro: novaConfig.perguntarBairro ?? false,
+        sentidoDe: novaConfig.sentidoDe ?? '',
+        sentidoPara: novaConfig.sentidoPara ?? '',
+        data: novaConfig.data ?? '',
+        posto: novaConfig.posto ?? '',
+        rodovia: novaConfig.rodovia ?? '',
+        pesquisador: novaConfig.pesquisador ?? ''
+      };
+      await AsyncStorage.setItem('respostasFixas', JSON.stringify(respostasFixas));
       setMostrandoNovaConfig(false);
       setShowResumo(true);
     }
