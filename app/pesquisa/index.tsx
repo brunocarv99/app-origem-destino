@@ -59,7 +59,7 @@ const mercadorias = [
   "Oxigênio", "Pedra e brita", "Veículos e peças", "Vestuário e calçados"
 ];
 const eixosSuspensos = ["0", "1", "2", "3", "4", "5", "6", "7"];
-const vazioOpcoes = ["Sim", "Não"];
+const carregadoOpcoes = ["Sim", "Não"];
 const ufs = estadosCidades.estados.map(e => e.sigla);
 
 function getCidadesPorUf(uf: string) {
@@ -143,59 +143,236 @@ const maxOcupantesPorTipo = {
   Utilitario: 20,
 };
 
-async function enviarPesquisaServidor(pesquisa: any) {
-  try {
-    const resposta = await fetch('https://backend-app-pgrx.onrender.com/pesquisas', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(pesquisa),
-    });
-    if (resposta.ok) {
-      // Marcar como enviada no AsyncStorage usando o campo id
-      const pesquisasSalvas = await AsyncStorage.getItem('pesquisas');
-      let pesquisas = pesquisasSalvas ? JSON.parse(pesquisasSalvas) : [];
-      pesquisas = pesquisas.map((p: any) =>
-        p.id === pesquisa.id ? { ...p, enviada: true } : p
-      );
-      await AsyncStorage.setItem('pesquisas', JSON.stringify(pesquisas));
-    } else {
-      Alert.alert('Erro ao enviar pesquisa para o servidor');
-    }
-  } catch (e) {
-    
+type SyncResultado = {
+  totalPendentes: number;
+  enviados: number;
+  falhas: number;
+};
+
+const SYNC_ENDPOINT = 'https://backend-app-pgrx.onrender.com/pesquisas';
+const SYNC_TIMEOUT_MS = 90000;
+const SYNC_RESUMO_LIMITE = 220;
+
+function resumirDetalheSync(valor: unknown) {
+  if (valor === null || valor === undefined) {
+    return '';
   }
+
+  const texto =
+    typeof valor === 'string'
+      ? valor
+      : JSON.stringify(valor);
+
+  const textoLimpo = texto.replace(/\s+/g, ' ').trim();
+  return textoLimpo.length > SYNC_RESUMO_LIMITE
+    ? `${textoLimpo.slice(0, SYNC_RESUMO_LIMITE)}...`
+    : textoLimpo;
+}
+
+function prepararPesquisaParaEnvio(pesquisa: any) {
+  const {
+    enviada,
+    dataHoraSincronizacao,
+    ultimaTentativaSincronizacao,
+    ultimoErroSincronizacao,
+    ultimoStatusSincronizacao,
+    ...payload
+  } = pesquisa;
+
+  return payload;
+}
+
+function interpretarRespostaSync(status: number, corpoTexto: string) {
+  let corpoJson: any = null;
+
+  if (corpoTexto) {
+    try {
+      corpoJson = JSON.parse(corpoTexto);
+    } catch {
+      corpoJson = null;
+    }
+  }
+
+  if (status < 200 || status >= 300) {
+    return {
+      sucesso: false,
+      detalhe: resumirDetalheSync(corpoJson ?? corpoTexto) || `HTTP ${status}`,
+      status,
+    };
+  }
+
+  if (corpoJson && typeof corpoJson === 'object' && !Array.isArray(corpoJson)) {
+    if ('success' in corpoJson && corpoJson.success === false) {
+      return {
+        sucesso: false,
+        detalhe: resumirDetalheSync(corpoJson.message ?? corpoJson),
+        status,
+      };
+    }
+
+    if ('ok' in corpoJson && corpoJson.ok === false) {
+      return {
+        sucesso: false,
+        detalhe: resumirDetalheSync(corpoJson.message ?? corpoJson),
+        status,
+      };
+    }
+
+    if ('acknowledged' in corpoJson && corpoJson.acknowledged === false) {
+      return {
+        sucesso: false,
+        detalhe: resumirDetalheSync(corpoJson.message ?? corpoJson),
+        status,
+      };
+    }
+
+    if ('insertedCount' in corpoJson && Number(corpoJson.insertedCount) === 0) {
+      return {
+        sucesso: false,
+        detalhe: resumirDetalheSync(corpoJson.message ?? corpoJson),
+        status,
+      };
+    }
+
+    if ('error' in corpoJson && corpoJson.error) {
+      return {
+        sucesso: false,
+        detalhe: resumirDetalheSync(corpoJson.error),
+        status,
+      };
+    }
+
+    if ('erro' in corpoJson && corpoJson.erro) {
+      return {
+        sucesso: false,
+        detalhe: resumirDetalheSync(corpoJson.erro),
+        status,
+      };
+    }
+  }
+
+  return {
+    sucesso: true,
+    detalhe: resumirDetalheSync(corpoJson ?? corpoTexto) || `HTTP ${status}`,
+    status,
+  };
 }
 
 // Função para sincronizar pesquisas pendentes
-let sincronizando = false;
+let sincronizacaoAtual: Promise<SyncResultado> | null = null;
 async function sincronizarPesquisasPendentes() {
-  if (sincronizando) return; // evita concorrência
-  sincronizando = true;
-  try {
+  if (sincronizacaoAtual) {
+    return sincronizacaoAtual;
+  }
+  sincronizacaoAtual = (async () => {
     const pesquisasSalvas = await AsyncStorage.getItem('pesquisas');
     let pesquisas = pesquisasSalvas ? JSON.parse(pesquisasSalvas) : [];
     const pendentes = pesquisas.filter((p: any) => !p.enviada);
 
+    if (pendentes.length === 0) {
+      Alert.alert('Não há pesquisas pendentes para sincronizar.');
+      return { totalPendentes: 0, enviados: 0, falhas: 0 };
+    }
+
+    let enviados = 0;
+    let falhas = 0;
+    const detalhesFalha: string[] = [];
+
     for (const pesquisa of pendentes) {
+      const aindaPendente = pesquisas.some((p: any) => p.id === pesquisa.id && !p.enviada);
+      if (!aindaPendente) {
+        continue;
+      }
+
       try {
-        const resposta = await fetch('https://backend-app-pgrx.onrender.com/pesquisas', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(pesquisa),
-        });
-        if (resposta.ok) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), SYNC_TIMEOUT_MS);
+        let resposta;
+
+        try {
+          resposta = await fetch(SYNC_ENDPOINT, {
+            method: 'POST',
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(prepararPesquisaParaEnvio(pesquisa)),
+            signal: controller.signal,
+          });
+        } finally {
+          clearTimeout(timeoutId);
+        }
+
+        const corpoTexto = await resposta.text();
+        const resultadoSync = interpretarRespostaSync(resposta.status, corpoTexto);
+
+        if (!resultadoSync.sucesso) {
+          falhas += 1;
+          detalhesFalha.push(resultadoSync.detalhe || `HTTP ${resultadoSync.status}`);
           pesquisas = pesquisas.map((p: any) =>
-            p.id === pesquisa.id ? { ...p, enviada: true } : p
+            p.id === pesquisa.id
+              ? {
+                  ...p,
+                  ultimaTentativaSincronizacao: getFormattedDateTime(),
+                  ultimoErroSincronizacao: resultadoSync.detalhe || `HTTP ${resultadoSync.status}`,
+                  ultimoStatusSincronizacao: resultadoSync.status,
+                }
+              : p
           );
           await AsyncStorage.setItem('pesquisas', JSON.stringify(pesquisas));
+          console.error('[SYNC] Falha ao enviar pesquisa', pesquisa.id, resultadoSync.status, resultadoSync.detalhe);
+          continue;
         }
+
+        enviados += 1;
+        pesquisas = pesquisas.map((p: any) =>
+          p.id === pesquisa.id
+            ? {
+                ...p,
+                enviada: true,
+                dataHoraSincronizacao: getFormattedDateTime(),
+                ultimaTentativaSincronizacao: getFormattedDateTime(),
+                ultimoErroSincronizacao: null,
+                ultimoStatusSincronizacao: resultadoSync.status,
+              }
+            : p
+        );
+        await AsyncStorage.setItem('pesquisas', JSON.stringify(pesquisas));
       } catch (e) {
-        // mantém para próxima tentativa
+        falhas += 1;
+        const detalheErro = e instanceof Error ? e.message : String(e);
+        detalhesFalha.push(detalheErro);
+        pesquisas = pesquisas.map((p: any) =>
+          p.id === pesquisa.id
+            ? {
+                ...p,
+                ultimaTentativaSincronizacao: getFormattedDateTime(),
+                ultimoErroSincronizacao: detalheErro,
+              }
+            : p
+        );
+        await AsyncStorage.setItem('pesquisas', JSON.stringify(pesquisas));
+        console.error('[SYNC] Erro ao enviar pesquisa', pesquisa.id, detalheErro);
       }
     }
-    Alert.alert('Sincronização concluída!');
+
+    if (falhas === 0) {
+      Alert.alert('Sincronização concluída', `${enviados} pesquisa(s) enviada(s).`);
+    } else {
+      const primeiraFalha = detalhesFalha[0] || 'Falha sem detalhe retornado.';
+      Alert.alert(
+        'Sincronização parcial',
+        `${enviados} enviada(s) e ${falhas} pendente(s).\nPrimeira falha: ${primeiraFalha}`
+      );
+    }
+
+    return { totalPendentes: pendentes.length, enviados, falhas };
+  })();
+
+  try {
+    return await sincronizacaoAtual;
   } finally {
-    sincronizando = false;
+    sincronizacaoAtual = null;
   }
 }
 
@@ -235,7 +412,7 @@ export default function Pesquisa() {
   const [pesoCarga, setPesoCarga] = useState("");
   const [tara, setTara] = useState("");
   const [pesoBruto, setPesoBruto] = useState("");
-  const [vazio, setVazio] = useState("");
+  const [carregado, setCarregado] = useState("");
 
   // Específicos passeio/moto/utilitário
   const [tipoVeiculo, setTipoVeiculo] = useState("");
@@ -657,13 +834,14 @@ export default function Pesquisa() {
 
         <Text style={styles.label}>Veículo carregado?</Text>
         <Picker
-          selectedValue={vazio}
-          onValueChange={setVazio}
+          selectedValue={carregado}
+          onValueChange={setCarregado}
           style={styles.input}
         >
           <Picker.Item label="Selecione" value="" />
-          <Picker.Item label="Sim" value="Sim" />
-          <Picker.Item label="Não" value="Não" />
+          {carregadoOpcoes.map((item) => (
+            <Picker.Item key={item} label={item} value={item} />
+          ))}
         </Picker>
 
         <Text style={styles.label}>Peso bruto do veículo em toneladas (Peso do veículo + capacidade):</Text>
@@ -751,7 +929,7 @@ export default function Pesquisa() {
               onPress={async () => {
                 console.log('[DEBUG] Salvando pesquisa caminhão - campos:', {
                   classeCaminhao, origemUf, origemCidade, destinoUf, destinoCidade,
-                  frequencia, eixosSuspenso, mercadoria, pesoCarga, pesoBruto, tara, vazio,
+                  frequencia, eixosSuspenso, mercadoria, pesoCarga, pesoBruto, tara, carregado,
                 });
                 // Validação dos campos obrigatórios (todas as perguntas devem ser respondidas)
                 const obrigatorios = [
@@ -765,7 +943,7 @@ export default function Pesquisa() {
                   pesoCarga,
                   pesoBruto,
                   tara,
-                  vazio,
+                  carregado,
                   rendaFamiliar,
                   motivoViagem
                 ];
@@ -852,7 +1030,7 @@ export default function Pesquisa() {
                   pesoCarga: Number(pesoCarga),
                   tara: taraCalculada,
                   pesoBruto: pesoBrutoNum,
-                  vazio,
+                  carregado,
                   rendaFamiliar,
                   motivoViagem: motivoViagem.startsWith("Outros") ? motivoViagemOutro : motivoViagem,
                   data: new Date(),

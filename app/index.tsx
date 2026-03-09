@@ -1,18 +1,10 @@
-import { Link, useRouter } from "expo-router";
-import { useEffect } from "react";
+import { Link } from "expo-router";
+import { useState } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
-import { useSyncPesquisa } from "../hooks/useSyncPesquisa";
 import { sincronizarPesquisasPendentes } from "./pesquisa/index";
 
 export default function HomeScreen() {
-  
-  const router = useRouter();
-  
-  useEffect(() => {
-    // kept for side-effects in hook; no local respostas state needed here
-  }, []);
-
-  useSyncPesquisa();
+  const [sincronizandoManual, setSincronizandoManual] = useState(false);
 
   return (
     <View style={styles.container}>
@@ -81,12 +73,22 @@ export default function HomeScreen() {
           style={{
             ...styles.button,
             backgroundColor: "#191b19ff",
+            opacity: sincronizandoManual ? 0.7 : 1,
           }}
+          disabled={sincronizandoManual}
           onPress={async () => {
-            await sincronizarPesquisasPendentes();
+            if (sincronizandoManual) return;
+            setSincronizandoManual(true);
+            try {
+              await sincronizarPesquisasPendentes();
+            } finally {
+              setSincronizandoManual(false);
+            }
           }}
         >
-          <Text style={styles.buttonText}>Sincronizar Pesquisas</Text>
+          <Text style={styles.buttonText}>
+            {sincronizandoManual ? "Sincronizando..." : "Sincronizar Pesquisas"}
+          </Text>
         </Pressable>
       
       </View>

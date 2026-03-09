@@ -1,0 +1,28 @@
+# dependencies
+node_modules/
+
+# local Expo/dev artifacts
+.expo/
+.expo-shared/
+dist/
+web-build/
+
+# vcs/editor noise
+.git/
+.vscode/
+
+# native build outputs and caches
+android/.gradle/
+android/.kotlin/
+android/build/
+android/app/build/
+android/app/.cxx/
+
+# logs and temp files
+*.log
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# local env
+.env*.local
