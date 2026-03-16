@@ -149,6 +149,10 @@ type SyncResultado = {
   falhas: number;
 };
 
+type SyncOpcoes = {
+  forcarReenvio?: boolean;
+};
+
 const SYNC_ENDPOINT = 'https://backend-app-pgrx.onrender.com/pesquisas';
 const SYNC_TIMEOUT_MS = 90000;
 const SYNC_RESUMO_LIMITE = 220;
@@ -260,14 +264,15 @@ function interpretarRespostaSync(status: number, corpoTexto: string) {
 
 // Função para sincronizar pesquisas pendentes
 let sincronizacaoAtual: Promise<SyncResultado> | null = null;
-async function sincronizarPesquisasPendentes() {
+async function sincronizarPesquisasPendentes(opcoes: SyncOpcoes = {}) {
+  const forcarReenvio = opcoes.forcarReenvio === true;
   if (sincronizacaoAtual) {
     return sincronizacaoAtual;
   }
   sincronizacaoAtual = (async () => {
     const pesquisasSalvas = await AsyncStorage.getItem('pesquisas');
     let pesquisas = pesquisasSalvas ? JSON.parse(pesquisasSalvas) : [];
-    const pendentes = pesquisas.filter((p: any) => !p.enviada);
+    const pendentes = forcarReenvio ? pesquisas : pesquisas.filter((p: any) => !p.enviada);
 
     if (pendentes.length === 0) {
       Alert.alert('Não há pesquisas pendentes para sincronizar.');
@@ -279,7 +284,7 @@ async function sincronizarPesquisasPendentes() {
     const detalhesFalha: string[] = [];
 
     for (const pesquisa of pendentes) {
-      const aindaPendente = pesquisas.some((p: any) => p.id === pesquisa.id && !p.enviada);
+      const aindaPendente = forcarReenvio ? pesquisas.some((p: any) => p.id === pesquisa.id) : pesquisas.some((p: any) => p.id === pesquisa.id && !p.enviada);
       if (!aindaPendente) {
         continue;
       }
@@ -1873,4 +1878,3 @@ function getChaveClasse(nomeClasse) {
 }
 
 export { sincronizarPesquisasPendentes };
-
