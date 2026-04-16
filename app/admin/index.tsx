@@ -1,8 +1,11 @@
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { AppButton } from "@/components/ui/AppButton";
+import { FormCard } from "@/components/ui/FormCard";
 import Banco from "../banco";
 import ConfiguracaoScreen from "../config";
+import { appTheme } from "@/theme/appTheme";
 
 const SENHA_FIXA = "@trafego25";
 
@@ -26,7 +29,7 @@ export default function AdminScreen() {
     <View style={styles.container}>
       <Modal visible={!autenticado} transparent animationType="fade" onRequestClose={() => router.back()}>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
+          <FormCard style={styles.modalCard}>
             <Text style={styles.modalTitle}>Digite a senha para acessar</Text>
             <TextInput
               style={styles.input}
@@ -37,14 +40,10 @@ export default function AdminScreen() {
               autoFocus
             />
             <View style={{ flexDirection: "row", gap: 12 }}>
-              <Pressable style={[styles.button, { flex: 1, backgroundColor: "#021b36ff" }]} onPress={validarSenha}>
-                <Text style={styles.buttonText}>Entrar</Text>
-              </Pressable>
-              <Pressable style={[styles.button, { flex: 1, backgroundColor: "#888" }]} onPress={() => router.back()}>
-                <Text style={styles.buttonText}>Voltar</Text>
-              </Pressable>
+              <AppButton label="Entrar" onPress={validarSenha} style={styles.modalButton} />
+              <AppButton label="Voltar" onPress={() => router.back()} variant="secondary" style={styles.modalButton} />
             </View>
-          </View>
+          </FormCard>
         </View>
       </Modal>
 
@@ -60,14 +59,12 @@ export default function AdminScreen() {
           </View>
 
           <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 12 }}>
-            {activeTab === null && <Text style={{ textAlign: "center", color: "#666" }}>Escolha uma opção acima.</Text>}
+            {activeTab === null && <Text style={styles.helperText}>Escolha uma opção acima.</Text>}
             {activeTab === "config" && <ConfiguracaoScreen requirePassword={false} />}
             {activeTab === "banco" && <Banco requirePassword={false} />}
           </ScrollView>
 
-          <Pressable style={[styles.button, { margin: 12, backgroundColor: "#666" }]} onPress={() => router.back()}>
-            <Text style={styles.buttonText}>Voltar</Text>
-          </Pressable>
+          <AppButton label="Voltar" onPress={() => router.back()} variant="secondary" fullWidth={false} style={styles.footerButton} />
         </View>
       )}
     </View>
@@ -75,15 +72,39 @@ export default function AdminScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-  modalOverlay: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0,0,0,0.3)" },
-  modalCard: { width: 340, backgroundColor: "#fff", borderRadius: 12, padding: 18 },
-  modalTitle: { fontSize: 18, fontWeight: "700", marginBottom: 12, textAlign: "center" },
-  input: { borderWidth: 1, borderColor: "#ccc", borderRadius: 8, padding: 10, marginBottom: 12 },
-  button: { borderRadius: 8, padding: 12, alignItems: "center" },
-  buttonText: { color: "#fff", fontWeight: "700" },
-  tabRow: { flexDirection: "row", padding: 12, justifyContent: "space-between" },
-  tabButton: { flex: 1, marginHorizontal: 6, paddingVertical: 10, borderRadius: 8, backgroundColor: "#021b36ff", alignItems: "center" },
-  tabActive: { backgroundColor: "#072531a4" },
-  tabText: { color: "#fff", fontWeight: "700" },
+  container: { flex: 1, backgroundColor: appTheme.colors.background },
+  modalOverlay: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(15,23,42,0.45)" },
+  modalCard: {
+    width: 340,
+    maxWidth: "92%",
+  },
+  modalTitle: {
+    ...appTheme.typography.subtitle,
+    marginBottom: appTheme.spacing.sm,
+    textAlign: "center",
+    color: appTheme.colors.text,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: appTheme.colors.border,
+    borderRadius: appTheme.radius.md,
+    padding: appTheme.spacing.sm,
+    marginBottom: appTheme.spacing.sm,
+    backgroundColor: appTheme.colors.surfaceSoft,
+    color: appTheme.colors.text,
+  },
+  modalButton: { flex: 1 },
+  footerButton: { minWidth: 120, alignSelf: "center", paddingHorizontal: appTheme.spacing.md },
+  tabRow: { flexDirection: "row", padding: appTheme.spacing.sm, justifyContent: "space-between", backgroundColor: appTheme.colors.surface },
+  tabButton: {
+    flex: 1,
+    marginHorizontal: appTheme.spacing.xs,
+    paddingVertical: appTheme.spacing.sm,
+    borderRadius: appTheme.radius.md,
+    backgroundColor: appTheme.colors.primaryStrong,
+    alignItems: "center",
+  },
+  tabActive: { backgroundColor: appTheme.colors.accent },
+  tabText: { color: "#fff", ...appTheme.typography.button },
+  helperText: { textAlign: "center", color: appTheme.colors.textMuted, marginTop: appTheme.spacing.sm, ...appTheme.typography.body },
 });

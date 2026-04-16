@@ -1,7 +1,11 @@
 // app/banco/index.tsx
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
-import { Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Modal, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { AppButton } from '@/components/ui/AppButton';
+import { FormCard } from '@/components/ui/FormCard';
+import { SectionTitle } from '@/components/ui/SectionTitle';
+import { appTheme } from '@/theme/appTheme';
 
 // Senha fixa igual à configuração
 const SENHA_FIXA = "@trafego25";
@@ -92,9 +96,9 @@ export default function Banco({ requirePassword = true }: { requirePassword?: bo
         animationType="fade"
         onRequestClose={() => {}}
       >
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.3)' }}>
-          <View style={{ backgroundColor: '#fff', borderRadius: 12, padding: 24, width: 320, alignItems: 'center' }}>
-            <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 16 }}>Digite a senha para acessar</Text>
+        <View style={styles.modalOverlay}>
+          <FormCard style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Digite a senha para acessar</Text>
             <TextInput
               style={[styles.input, { marginBottom: 12 }]}
               value={senhaDigitada}
@@ -104,44 +108,39 @@ export default function Banco({ requirePassword = true }: { requirePassword?: bo
               autoFocus
             />
             {erroSenha ? (
-              <Text style={{ color: 'red', marginBottom: 8 }}>{erroSenha}</Text>
+              <Text style={{ color: appTheme.colors.danger, marginBottom: 8 }}>{erroSenha}</Text>
             ) : null}
             <View style={{ flexDirection: 'row', marginTop: 12, gap: 12 }}>
-              <TouchableOpacity
-                style={[styles.button, { backgroundColor: '#021b36ff', flex: 1 }]}
-                onPress={validarSenha}
-              >
-                <Text style={styles.buttonText}>Entrar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.button, { backgroundColor: '#888', flex: 1 }]}
+              <AppButton label="Entrar" onPress={validarSenha} style={styles.flexButton} />
+              <AppButton
+                label="Voltar"
+                variant="secondary"
+                style={styles.flexButton}
                 onPress={() => {
                   setShowSenhaModal(false);
                   setSenhaDigitada("");
                   setErroSenha("");
                 }}
-              >
-                <Text style={styles.buttonText}>Voltar</Text>
-              </TouchableOpacity>
+              />
             </View>
-          </View>
+          </FormCard>
         </View>
       </Modal>
 
       {/* Só mostra o conteúdo se o acesso estiver liberado */}
       {acessoLiberado && (
         <>
-          <Text style={styles.title}>Respostas Salvas</Text>
-          <Text style={{ fontSize: 20, fontWeight: "bold", marginBottom: 8 }}>
+          <SectionTitle centered style={styles.pageTitle}>Respostas Salvas</SectionTitle>
+          <Text style={styles.totalHoje}>
             Pesquisas respondidas hoje: {totalHoje}
           </Text>
-          <Text style={{ fontSize: 16, marginBottom: 4 }}>
+          <Text style={styles.totalLinha}>
             Respostas Salvas para Passeio: {totalPasseio}
           </Text>
-          <Text style={{ fontSize: 16, marginBottom: 4 }}>
+          <Text style={styles.totalLinha}>
             Respostas Salvas para Caminhões: {totalCaminhao}
           </Text>
-          <Text style={{ fontSize: 16, marginBottom: 16 }}>
+          <Text style={[styles.totalLinha, { marginBottom: 16 }]}>
             Respostas Salvas para Ônibus: {totalOnibus}
           </Text>
           <ScrollView style={{ width: '100%' }}>
@@ -170,15 +169,40 @@ export default function Banco({ requirePassword = true }: { requirePassword?: bo
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: 'center', padding: 16, backgroundColor: '#fff' },
-  title: { fontSize: 18, fontWeight: 'bold', marginBottom: 16 },
-  total: { fontSize: 16, marginBottom: 12, color: '#333' },
-  card: { backgroundColor: '#f2f2f2', borderRadius: 8, padding: 12, marginBottom: 16, width: '100%' },
+  container: { flex: 1, alignItems: 'center', padding: 16, backgroundColor: appTheme.colors.background },
+  pageTitle: { marginTop: appTheme.spacing.sm, color: appTheme.colors.text },
+  total: { ...appTheme.typography.body, marginBottom: appTheme.spacing.sm, color: appTheme.colors.textMuted },
+  totalHoje: { ...appTheme.typography.subtitle, marginBottom: appTheme.spacing.xs, color: appTheme.colors.text },
+  totalLinha: { ...appTheme.typography.body, marginBottom: 4, color: appTheme.colors.textMuted },
+  card: {
+    backgroundColor: appTheme.colors.surface,
+    borderRadius: appTheme.radius.md,
+    padding: 12,
+    marginBottom: 16,
+    width: '100%',
+    borderWidth: 1,
+    borderColor: appTheme.colors.border,
+  },
   row: { flexDirection: 'row', marginBottom: 4 },
-  label: { fontWeight: 'bold', marginRight: 6, color: '#021b36ff' },
-  value: { flex: 1, color: '#333' },
-  empty: { fontSize: 14, color: '#888', marginTop: 20 },
-  input: { borderWidth: 1, borderColor: '#021b36', borderRadius: 8, padding: 10, fontSize: 18, backgroundColor: '#e6ecf2', width: 220, color: '#222' },
-  button: { borderRadius: 8, padding: 10, alignItems: 'center' },
-  buttonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+  label: { fontWeight: 'bold', marginRight: 6, color: appTheme.colors.primary },
+  value: { flex: 1, color: appTheme.colors.textMuted },
+  empty: { fontSize: 14, color: appTheme.colors.textMuted, marginTop: 20 },
+  input: {
+    borderWidth: 1,
+    borderColor: appTheme.colors.border,
+    borderRadius: appTheme.radius.md,
+    padding: 10,
+    fontSize: 18,
+    backgroundColor: appTheme.colors.surfaceSoft,
+    width: 220,
+    color: appTheme.colors.text,
+  },
+  modalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(15,23,42,0.45)' },
+  modalCard: {
+    width: 320,
+    maxWidth: "92%",
+    alignItems: 'center',
+  },
+  modalTitle: { ...appTheme.typography.subtitle, marginBottom: appTheme.spacing.md, color: appTheme.colors.text },
+  flexButton: { flex: 1 },
 });

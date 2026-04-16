@@ -4,9 +4,16 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { Alert, Button, Image, Keyboard, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import estadosCidades from "../../assets/estados-cidades.json";
+import { appTheme } from "@/theme/appTheme";
 
 function removerAcentos(str: string) {
   return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+function sanitizarDecimal(texto: string) {
+  const sanitized = texto.replace(/,/g, '.').replace(/[^0-9.]/g, '');
+  const parts = sanitized.split('.');
+  return parts.length > 2 ? `${parts[0]}.${parts.slice(1).join('')}` : sanitized;
 }
 
 const classesCaminhao = [
@@ -34,9 +41,19 @@ const classesCaminhao = [
   { nome: "3M6 (9 eixos)", imagem: require("../../assets/images/3m6.png") },
 
 ];
+
+const gruposEixoCaminhao = [
+  { label: "2 eixos", value: 2 },
+  { label: "3 eixos", value: 3 },
+  { label: "4 eixos", value: 4 },
+  { label: "5 eixos", value: 5 },
+  { label: "6 eixos", value: 6 },
+  { label: "7 eixos", value: 7 },
+  { label: "9 eixos", value: 9 },
+];
 const frequencias = ["Diária", "Semanal", "Mensal", "Eventual"];
 const rendas = [
-  "Acima de R$ 7.0000,00",
+  "Acima de R$ 7.000,00",
   "Entre R$ 4.001,00 e R$ 7.000,00",
   "Entre R$ 1.001,00 e R$ 4.000,00",
   "Até R$ 1.000,00",
@@ -106,36 +123,29 @@ const eixosPorClasse = {
 
 // Limites por classe (em toneladas)
 const limitesPorClasse = {
-  "2C (2 eixos)": { pbt: [7, 27], capacidade: [3, 10] },
-  "3C (3 eixos)": { pbt: [15, 35], capacidade: [10, 19] },
-  "2S1 (3 eixos)": { pbt: [18, 38], capacidade: [10, 19] },
-  "4CD (4 eixos)": { pbt: [21, 41], capacidade: [13, 21] },
-  "2C2 (4 eixos)": { pbt: [28, 48], capacidade: [13, 32] },
-  "2S2 (4 eixos)": { pbt: [25, 45], capacidade: [13, 32] },
-  "2I2 (4 eixos)": { pbt: [28, 48], capacidade: [13, 32] },
-  "2C3 (5 eixos)": { pbt: [31, 61], capacidade: [18, 42] },
-  "3C2 (5 eixos)": { pbt: [31, 61], capacidade: [18, 42] },
-  "2S3 (5 eixos)": { pbt: [29, 59], capacidade: [18, 42] },
-  "3S2 (5 eixos)": { pbt: [31, 61], capacidade: [18, 42] },
-  "2I3 (5 eixos)": { pbt: [31, 61], capacidade: [18, 42] },
-  "3I2 (5 eixos)": { pbt: [31, 61], capacidade: [18, 42] },
-  "2J3 (5 eixos)": { pbt: [31, 61], capacidade: [18, 42] },
-  "3C3 (6 eixos)": { pbt: [38, 68], capacidade: [24, 47] },
-  "3J3 (6 eixos)": { pbt: [38, 68], capacidade: [24, 47] },
-  "3I3 (6 eixos)": { pbt: [41, 71], capacidade: [24, 47] },
-  "3S3 (6 eixos)": { pbt: [36, 66], capacidade: [24, 47] },
-  "BITREM 3S2S2 (7 eixos)": { pbt: [45, 75], capacidade: [25, 52] },
-  "RODOTREM 3S2C4 (9 eixos)": { pbt: [45, 75], capacidade: [26, 70] },
-  "TRITREM 3S2S2S2 (9 eixos)": { pbt: [63, 93], capacidade: [26, 70] },
-  "3M6 (9 eixos)": { pbt: [63, 93], capacidade: [26, 70] },
+  "2C (2 eixos)": { tara: [5, 15], pbt: [11, 21], capacidade: [4, 8] },
+  "3C (3 eixos)": { tara: [6, 16], pbt: [18, 28], capacidade: [7, 17] },
+  "2S1 (3 eixos)": { tara: [6.5, 16.5], pbt: [21, 31], capacidade: [9.5, 19.5] },
+  "4CD (4 eixos)": { tara: [7, 17], pbt: [21, 31], capacidade: [9, 19] },
+  "2C2 (4 eixos)": { tara: [10, 20], pbt: [33, 43], capacidade: [18, 28] },
+  "2S2 (4 eixos)": { tara: [10, 20], pbt: [28, 38], capacidade: [13, 23] },
+  "2I2 (4 eixos)": { tara: [10, 20], pbt: [31, 41], capacidade: [16, 26] },
+  "2C3 (5 eixos)": { tara: [13, 19], pbt: [31, 61], capacidade: [18, 42] },
+  "3C2 (5 eixos)": { tara: [13, 19], pbt: [31, 61], capacidade: [18, 42] },
+  "2S3 (5 eixos)": { tara: [11, 17], pbt: [29, 59], capacidade: [18, 42] },
+  "3S2 (5 eixos)": { tara: [13, 19], pbt: [31, 61], capacidade: [18, 42] },
+  "2I3 (5 eixos)": { tara: [13, 19], pbt: [31, 61], capacidade: [18, 42] },
+  "3I2 (5 eixos)": { tara: [13, 19], pbt: [31, 61], capacidade: [18, 42] },
+  "2J3 (5 eixos)": { tara: [13, 19], pbt: [31, 61], capacidade: [18, 42] },
+  "3C3 (6 eixos)": { tara: [14, 21], pbt: [38, 68], capacidade: [24, 47] },
+  "3J3 (6 eixos)": { tara: [14, 21], pbt: [38, 68], capacidade: [24, 47] },
+  "3I3 (6 eixos)": { tara: [17, 24], pbt: [41, 71], capacidade: [24, 47] },
+  "3S3 (6 eixos)": { tara: [12, 19], pbt: [36, 66], capacidade: [24, 47] },
+  "BITREM 3S2S2 (7 eixos)": { tara: [20, 23], pbt: [45, 75], capacidade: [25, 52] },
+  "RODOTREM 3S2C4 (9 eixos)": { tara: [19, 25], pbt: [45, 75], capacidade: [26, 70] },
+  "TRITREM 3S2S2S2 (9 eixos)": { tara: [23, 37], pbt: [63, 93], capacidade: [26, 70] },
+  "3M6 (9 eixos)": { tara: [23, 37], pbt: [63, 93], capacidade: [26, 70] },
 };
-function getLimitesTara(classe: any) {
-  const { pbt, capacidade } = (limitesPorClasse as any)[classe] || {};
-  if (!pbt || !capacidade) return [0, 0];
-  const taraMin = pbt[0]; // Tara mínima = PBT mínimo (capacidade zero)
-  const taraMax = pbt[1] - capacidade[0]; // Tara máxima = PBT máximo - Capacidade mínima
-  return [taraMin, taraMax];
-}
 
 const maxOcupantesPorTipo = {
   Moto: 2,
@@ -411,6 +421,7 @@ export default function Pesquisa() {
 
 
   // Específicos caminhão
+  const [grupoEixosCaminhao, setGrupoEixosCaminhao] = useState<number | null>(null);
   const [classeCaminhao, setClasseCaminhao] = useState("");
   const [eixosSuspenso, setEixosSuspenso] = useState("");
   const [mercadoria, setMercadoria] = useState("");
@@ -539,9 +550,63 @@ export default function Pesquisa() {
   if (tipoParam === "caminhao" && etapa === 1) {
     return (
       <View style={styles.container}>
+        <Text style={styles.title}>Selecione o grupo por quantidade de eixos</Text>
+        <ScrollView style={{ width: "100%", maxHeight: 400 }}>
+          {gruposEixoCaminhao.map((grupo) => {
+            const selecionado = grupoEixosCaminhao === grupo.value;
+            return (
+              <TouchableOpacity
+                key={grupo.value}
+                style={[
+                  styles.tipoVeiculoButton,
+                  selecionado ? styles.tipoVeiculoButtonSelecionado : null,
+                  { width: "96%", alignSelf: "center", marginVertical: 4 }
+                ]}
+                onPress={() => {
+                  setGrupoEixosCaminhao(grupo.value);
+                  setClasseCaminhao("");
+                  setEixosSuspenso("");
+                }}
+              >
+                <Text style={styles.tipoVeiculoTexto}>{grupo.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+        <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 16, width: '100%' }}>
+          <View style={{ flex: 1 }}>
+            <Button
+              title="Voltar"
+              color={appTheme.colors.accent}
+              onPress={() => router.back()}
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Button
+              title="Avançar"
+              color={appTheme.colors.primary}
+              onPress={() => {
+                if (!grupoEixosCaminhao) {
+                  Alert.alert("Selecione a quantidade de eixos.");
+                  return;
+                }
+                setEtapa(2);
+              }}
+            />
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  if (tipoParam === "caminhao" && etapa === 2) {
+    const classesFiltradas = classesCaminhao.filter((classe) => getQtdEixosClasse(classe.nome) === grupoEixosCaminhao);
+
+    return (
+      <View style={styles.container}>
         <Text style={styles.title}>Selecione a classe do caminhão</Text>
         <ScrollView style={{ width: "100%", maxHeight: 400 }}>
-          {classesCaminhao.map((classe) => {
+          {classesFiltradas.map((classe) => {
             const selecionado = classeCaminhao === classe.nome;
             return (
               <TouchableOpacity
@@ -561,8 +626,6 @@ export default function Pesquisa() {
                 ]}
                 onPress={() => {
                   setClasseCaminhao(classe.nome);
-                  const novaChave = getChaveClasse(classe.nome);
-                  const eixos = eixosPorClasse[novaChave] || ["0"];
                   // Não pré-selecionar quantidade para que o picker mostre
                   // a opção "Selecione a quantidade" por padrão.
                   setEixosSuspenso("");
@@ -589,15 +652,21 @@ export default function Pesquisa() {
           <View style={{ flex: 1 }}>
             <Button
               title="Voltar"
-              color="#072531a4"
-              onPress={() => router.back()}
+              color={appTheme.colors.accent}
+              onPress={() => setEtapa(1)}
             />
           </View>
           <View style={{ flex: 1 }}>
             <Button
               title="Avançar"
-              color="#021b36ff"
-              onPress={() => setEtapa(2)}
+              color={appTheme.colors.primary}
+              onPress={() => {
+                if (!classeCaminhao) {
+                  Alert.alert("Selecione a classe do caminhão.");
+                  return;
+                }
+                setEtapa(3);
+              }}
             />
           </View>
         </View>
@@ -605,7 +674,7 @@ export default function Pesquisa() {
     );
   }
 
-  if (tipoParam === "caminhao" && etapa === 2) {
+  if (tipoParam === "caminhao" && etapa === 3) {
     const cidadesOrigem = getCidadesPorUf(origemUf);
     const cidadesDestino = getCidadesPorUf(destinoUf);
     const classeSelecionadaObj = classesCaminhao.find(c => c.nome === classeCaminhao);
@@ -613,11 +682,6 @@ export default function Pesquisa() {
 
     // Limites e cálculo de capacidade dinamicamente exibida
     const classeLimites = limitesPorClasse[classeCaminhao];
-    const pesoBrutoNumDisplay = Number(pesoBruto);
-    const taraNumDisplay = Number(tara);
-    const capacidadeDisponivel = (!isNaN(pesoBrutoNumDisplay) && !isNaN(taraNumDisplay))
-      ? Math.max(0, pesoBrutoNumDisplay - taraNumDisplay)
-      : null;
 
     return (
       <ScrollView contentContainerStyle={[styles.container, { paddingBottom: 48 }]} keyboardShouldPersistTaps="always">
@@ -853,7 +917,7 @@ export default function Pesquisa() {
         <TextInput
           style={styles.input}
           value={pesoBruto}
-          onChangeText={setPesoBruto}
+          onChangeText={(text) => setPesoBruto(sanitizarDecimal(text))}
           placeholder={classeLimites ? `Limite: ${classeLimites.pbt[0]}–${classeLimites.pbt[1]} t` : ""}
           keyboardType="numeric"
           placeholderTextColor="#888"
@@ -863,33 +927,26 @@ export default function Pesquisa() {
         <TextInput
           style={styles.input}
           value={tara}
-          onChangeText={setTara}
+          onChangeText={(text) => setTara(sanitizarDecimal(text))}
           keyboardType="numeric"
-          placeholder="Digite o peso da tara"
+          placeholder={classeLimites ? `Limite: ${classeLimites.tara[0]}–${classeLimites.tara[1]} t` : "Digite o peso da tara"}
           placeholderTextColor="#888"
         />
 
-        <Text style={styles.label}>Peso da Carga em toneladas:</Text>
-        {capacidadeDisponivel !== null && (
-          <Text style={{ alignSelf: 'flex-start', marginLeft: '5%', marginBottom: 6, color: '#444' }}>
-            Capacidade disponível: {capacidadeDisponivel} t (intervalo 0–{capacidadeDisponivel} t)
-          </Text>
+        {carregado === "Sim" && (
+          <>
+            <Text style={styles.label}>Peso da Carga em toneladas:</Text>
+            <TextInput
+              style={styles.input}
+              value={pesoCarga}
+              onChangeText={(text) => setPesoCarga(sanitizarDecimal(text))}
+              editable={true}
+              placeholder={classeLimites ? `Limite: ${classeLimites.capacidade[0]}–${classeLimites.capacidade[1]} t` : 'Digite o peso da carga'}
+              keyboardType="numeric"
+              placeholderTextColor="#888"
+            />
+          </>
         )}
-        <TextInput
-          style={styles.input}
-          value={pesoCarga}
-          onChangeText={(text) => {
-            // troca vírgula por ponto e permite apenas números e um ponto
-            const sanitized = text.replace(/,/g, '.').replace(/[^0-9.]/g, '');
-            const parts = sanitized.split('.');
-            const safe = parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : sanitized;
-            setPesoCarga(safe);
-          }}
-          editable={true}
-          placeholder={capacidadeDisponivel !== null ? `Intervalo: 0–${capacidadeDisponivel} t` : 'Digite o peso da carga'}
-          keyboardType="numeric"
-          placeholderTextColor="#888"
-        />
 
         <Text style={styles.label}>Renda familiar:</Text>
         <Picker
@@ -925,12 +982,12 @@ export default function Pesquisa() {
         )}
         <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 24, marginBottom: 8, width: '100%' }}>
           <View style={{ flex: 1 }}>
-            <Button title="Voltar" onPress={() => setEtapa(1)} color="#072531a4" />
+            <Button title="Voltar" onPress={() => setEtapa(2)} color={appTheme.colors.accent} />
           </View>
           <View style={{ flex: 1 }}>
             <Button
               title="Salvar Pesquisa"
-              color="#021b36ff"
+              color={appTheme.colors.primary}
               onPress={async () => {
                 console.log('[DEBUG] Salvando pesquisa caminhão - campos:', {
                   classeCaminhao, origemUf, origemCidade, destinoUf, destinoCidade,
@@ -945,13 +1002,15 @@ export default function Pesquisa() {
                   frequencia,
                   eixosSuspenso,
                   mercadoria,
-                  pesoCarga,
                   pesoBruto,
                   tara,
                   carregado,
                   rendaFamiliar,
                   motivoViagem
                 ];
+                if (carregado === "Sim") {
+                  obrigatorios.push(pesoCarga);
+                }
                 if (perguntarBairro) {
                   obrigatorios.push(origemBairro, destinoBairro);
                 }
@@ -984,14 +1043,16 @@ export default function Pesquisa() {
                   Alert.alert("Classe de caminhão inválida.");
                   return;
                 }
+                const [taraMin, taraMax] = classeLimites.tara;
                 const [pbtMin, pbtMax] = classeLimites.pbt;
+                const [capacidadeMin, capacidadeMax] = classeLimites.capacidade;
 
-                const pesoCargaNum = Number(pesoCarga);
                 const pesoBrutoNum = Number(pesoBruto);
                 const taraNum = Number(tara);
+                const pesoCargaNum = carregado === "Sim" ? Number(pesoCarga) : null;
 
-                if (isNaN(pesoCargaNum) || isNaN(pesoBrutoNum) || isNaN(taraNum)) {
-                  Alert.alert("Preencha Peso da Carga, Peso bruto e Tara com valores numéricos.");
+                if (isNaN(pesoBrutoNum) || isNaN(taraNum) || (carregado === "Sim" && (pesoCargaNum === null || isNaN(pesoCargaNum)))) {
+                  Alert.alert("Preencha os campos numéricos obrigatórios com valores válidos.");
                   return;
                 }
 
@@ -1000,20 +1061,13 @@ export default function Pesquisa() {
                   return;
                 }
 
-                if (taraNum > pesoBrutoNum) {
-                  Alert.alert("A tara não pode ser maior que o Peso bruto do veículo.");
+                if (taraNum < taraMin || taraNum > taraMax) {
+                  Alert.alert(`Tara fora dos limites para a classe selecionada (${taraMin}–${taraMax}t).`);
                   return;
                 }
 
-
-                const capacidade = pesoBrutoNum - taraNum;
-                if (capacidade < 0) {
-                  Alert.alert("Tara inválida. A capacidade resultante é negativa.");
-                  return;
-                }
-
-                if (pesoCargaNum < 0 || pesoCargaNum > capacidade) {
-                  Alert.alert(`Peso da Carga inválido. Deve estar entre 0 e ${capacidade} t.`);
+                if (carregado === "Sim" && pesoCargaNum !== null && (pesoCargaNum < capacidadeMin || pesoCargaNum > capacidadeMax)) {
+                  Alert.alert(`Peso da carga fora dos limites para a classe selecionada (${capacidadeMin}–${capacidadeMax}t).`);
                   return;
                 }
                
@@ -1099,14 +1153,14 @@ export default function Pesquisa() {
           <View style={{ flex: 1 }}>
             <Button
               title="Voltar"
-              color="#072531a4"
+              color={appTheme.colors.accent}
               onPress={() => router.back()}
             />
           </View>
           <View style={{ flex: 1 }}>
             <Button
               title="Avançar"
-              color="#021b36ff"
+              color={appTheme.colors.primary}
               onPress={() => setEtapa(2)}
             />
           </View>
@@ -1345,12 +1399,12 @@ export default function Pesquisa() {
 
         <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 24, marginBottom: 8, width: '100%' }}>
           <View style={{ flex: 1 }}>
-            <Button title="Voltar" onPress={() => setEtapa(1)} color="#072531a4" />
+            <Button title="Voltar" onPress={() => setEtapa(1)} color={appTheme.colors.accent} />
           </View>
           <View style={{ flex: 1 }}>
             <Button
               title="Salvar Pesquisa"
-              color="#021b36ff"
+              color={appTheme.colors.primary}
               onPress={async () => {
                 // Validação dos campos obrigatórios (todas as perguntas devem ser respondidas)
                 const obrigatorios = [
@@ -1469,14 +1523,14 @@ export default function Pesquisa() {
           <View style={{ flex: 1 }}>
             <Button
               title="Voltar"
-              color="#072531a4"
+              color={appTheme.colors.accent}
               onPress={() => router.back()}
             />
           </View>
           <View style={{ flex: 1 }}>
             <Button
               title="Avançar"
-              color="#021b36ff"
+              color={appTheme.colors.primary}
               onPress={() => setEtapa(2)}
             />
           </View>
@@ -1671,12 +1725,12 @@ export default function Pesquisa() {
 
         <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 24, marginBottom: 8, width: '100%' }}>
           <View style={{ flex: 1 }}>
-            <Button title="Voltar" onPress={() => setEtapa(1)} color="#072531a4" />
+            <Button title="Voltar" onPress={() => setEtapa(1)} color={appTheme.colors.accent} />
           </View>
           <View style={{ flex: 1 }}>
                         <Button
               title="Salvar Pesquisa"
-              color="#021b36ff"
+              color={appTheme.colors.primary}
               onPress={async () => {
                 // Validação dos campos obrigatórios (todas as perguntas devem ser respondidas)
                 const obrigatorios = [
@@ -1744,38 +1798,38 @@ export default function Pesquisa() {
 
 const  styles = StyleSheet.create({
   container: {
-    padding: 8,
-    backgroundColor: "#fff",
+    padding: appTheme.spacing.sm,
+    backgroundColor: appTheme.colors.background,
     flexGrow: 1,
     justifyContent: "center",
     alignItems: "center",
   },
   title: {
-    fontSize: 22,
-    fontWeight: "bold",
-    marginBottom: 18,
+    ...appTheme.typography.subtitle,
+    marginBottom: appTheme.spacing.md,
     textAlign: "center",
+    color: appTheme.colors.text,
   },
   label: {
-    fontSize: 17,
-    marginBottom: 4,
-    fontWeight: "bold",
+    ...appTheme.typography.label,
+    marginBottom: appTheme.spacing.xs,
     alignSelf: "flex-start",
     marginLeft: "5%",
+    color: appTheme.colors.text,
   },
   input: {
     borderWidth: 1,
-    borderColor: "#021b36",
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 12,
-    fontSize: 16,
-    backgroundColor: "#e6ecf2",
+    borderColor: appTheme.colors.border,
+    borderRadius: appTheme.radius.md,
+    padding: appTheme.spacing.sm,
+    marginBottom: appTheme.spacing.sm,
+    ...appTheme.typography.body,
+    backgroundColor: appTheme.colors.surface,
     width: "90%",
     minWidth: 200,
     maxWidth: 400,
     alignSelf: "center",
-    color: "#222",
+    color: appTheme.colors.text,
   },
   tipoVeiculoRow: {
     flexDirection: "row",
@@ -1785,16 +1839,21 @@ const  styles = StyleSheet.create({
   },
   tipoVeiculoButton: {
     alignItems: "center",
-    padding: 6,
-    borderRadius: 8,
+    padding: 8,
+    borderRadius: appTheme.radius.md,
     borderWidth: 1,
-    borderColor: "#ccc",
+    borderColor: appTheme.colors.border,
     margin: 4,
-    backgroundColor: "#f9f9f9",
+    backgroundColor: appTheme.colors.surface,
+    shadowColor: appTheme.colors.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 2,
   },
   tipoVeiculoButtonSelecionado: {
-    borderColor: "#021b36ff",
-    backgroundColor: "#e0f0ff",
+    borderColor: appTheme.colors.primary,
+    backgroundColor: appTheme.colors.surfaceSoft,
   },
   tipoVeiculoImagem: {
   width: 64,
@@ -1802,28 +1861,27 @@ const  styles = StyleSheet.create({
   marginBottom: 2,
   },
   tipoVeiculoTexto: {
-    fontSize: 16,
-    fontWeight: "bold",
+    ...appTheme.typography.label,
+    color: appTheme.colors.text,
   },
   tipoVeiculoSelecionado: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#021b36ff",
-    marginBottom: 12,
+    ...appTheme.typography.subtitle,
+    color: appTheme.colors.primary,
+    marginBottom: appTheme.spacing.sm,
     alignSelf: "center",
   },
   dropDownText: {
     fontSize: 16,
-    color: "#222",
+    color: appTheme.colors.text,
   },
   suggestionContainer: {
     width: '90%',
     maxHeight: 220,
     borderWidth: 1,
-    borderColor: '#ccc',
-    backgroundColor: '#fff',
+    borderColor: appTheme.colors.border,
+    backgroundColor: appTheme.colors.surface,
     alignSelf: 'center',
-    borderRadius: 8,
+    borderRadius: appTheme.radius.md,
     marginBottom: 12,
     overflow: 'hidden',
   },
@@ -1831,15 +1889,15 @@ const  styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    backgroundColor: '#f9f9f9',
+    borderBottomColor: '#e9edf2',
+    backgroundColor: appTheme.colors.surface,
   },
   suggestionText: {
-    fontSize: 16,
-    color: '#222',
+    ...appTheme.typography.body,
+    color: appTheme.colors.text,
   },
   errorText: {
-    color: 'red',
+    color: appTheme.colors.danger,
     fontSize: 14,
     marginTop: -8,
     marginBottom: 8,
@@ -1875,6 +1933,11 @@ function getChaveClasse(nomeClasse) {
   if (eixosPorClasse[nomeClasse]) return nomeClasse;
   const chave = Object.keys(eixosPorClasse).find((k) => nomeClasse.startsWith(k));
   return chave || Object.keys(eixosPorClasse)[0];
+}
+
+function getQtdEixosClasse(nomeClasse: string) {
+  const match = nomeClasse.match(/\((\d+)\s+eixos?\)/i);
+  return match ? Number(match[1]) : null;
 }
 
 export { sincronizarPesquisasPendentes };

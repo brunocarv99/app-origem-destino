@@ -1,7 +1,11 @@
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Alert, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, Modal, Platform, StyleSheet, Text, TextInput, View } from "react-native";
+import { AppButton } from "@/components/ui/AppButton";
+import { FormCard } from "@/components/ui/FormCard";
+import { SectionTitle } from "@/components/ui/SectionTitle";
 import { sincronizarPesquisasPendentes } from "../pesquisa";
+import { appTheme } from "@/theme/appTheme";
 
 const SENHA_FIXA = "@trafego25";
 
@@ -56,7 +60,7 @@ export default function SincronizacaoScreen() {
     <View style={styles.container}>
       <Modal visible={!autenticado} transparent animationType="fade" onRequestClose={() => router.back()}>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
+          <FormCard style={styles.modalCard}>
             <Text style={styles.modalTitle}>Digite a senha para acessar</Text>
             <TextInput
               style={styles.input}
@@ -67,8 +71,9 @@ export default function SincronizacaoScreen() {
               autoFocus
             />
             <View style={styles.row}>
-              <Pressable
-                style={[styles.button, styles.primaryButton]}
+              <AppButton
+                label="Entrar"
+                style={styles.flexButton}
                 onPress={() => {
                   if (senha === SENHA_FIXA) {
                     setAutenticado(true);
@@ -78,44 +83,34 @@ export default function SincronizacaoScreen() {
                   Alert.alert("Senha incorreta");
                   setSenha("");
                 }}
-              >
-                <Text style={styles.buttonText}>Entrar</Text>
-              </Pressable>
-              <Pressable style={[styles.button, styles.secondaryButton]} onPress={() => router.back()}>
-                <Text style={styles.buttonText}>Voltar</Text>
-              </Pressable>
+              />
+              <AppButton label="Voltar" variant="secondary" style={styles.flexButton} onPress={() => router.back()} />
             </View>
-          </View>
+          </FormCard>
         </View>
       </Modal>
 
       {autenticado && (
         <View style={styles.content}>
-          <Text style={styles.title}>Sincronização</Text>
+          <SectionTitle centered style={styles.title}>Sincronização</SectionTitle>
 
-          <Pressable
-            style={[styles.button, styles.syncButton, sincronizando ? styles.disabled : null]}
+          <AppButton
+            label={sincronizandoModo === "pendentes" ? "Sincronizando..." : "Sincronizar Pesquisas"}
             disabled={sincronizando}
+            variant="neutral"
             onPress={() => void executarSincronizacao(false)}
-          >
-            <Text style={styles.buttonText}>
-              {sincronizandoModo === "pendentes" ? "Sincronizando..." : "Sincronizar Pesquisas"}
-            </Text>
-          </Pressable>
+            style={styles.syncButton}
+          />
 
-          <Pressable
-            style={[styles.button, styles.resendButton, sincronizando ? styles.disabled : null]}
+          <AppButton
+            label={sincronizandoModo === "todas" ? "Reenviando tudo..." : "Reenviar Todas Pesquisas"}
             disabled={sincronizando}
+            variant="secondary"
             onPress={confirmarReenvioTotal}
-          >
-            <Text style={styles.buttonText}>
-              {sincronizandoModo === "todas" ? "Reenviando tudo..." : "Reenviar Todas Pesquisas"}
-            </Text>
-          </Pressable>
+            style={styles.resendButton}
+          />
 
-          <Pressable style={[styles.button, styles.backButton]} onPress={() => router.back()}>
-            <Text style={styles.buttonText}>Voltar</Text>
-          </Pressable>
+          <AppButton label="Voltar" variant="secondary" onPress={() => router.back()} />
         </View>
       )}
     </View>
@@ -123,33 +118,33 @@ export default function SincronizacaoScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
+  container: { flex: 1, backgroundColor: appTheme.colors.background },
   content: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     padding: 16,
-    gap: 12,
+    gap: 14,
   },
-  title: { fontSize: 24, fontWeight: "700", marginBottom: 16 },
-  modalOverlay: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0,0,0,0.3)" },
-  modalCard: { width: 340, backgroundColor: "#fff", borderRadius: 12, padding: 18 },
-  modalTitle: { fontSize: 18, fontWeight: "700", marginBottom: 12, textAlign: "center" },
-  input: { borderWidth: 1, borderColor: "#ccc", borderRadius: 8, padding: 10, marginBottom: 12 },
+  title: { ...appTheme.typography.subtitle, marginBottom: appTheme.spacing.sm, color: appTheme.colors.text },
+  modalOverlay: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(15,23,42,0.45)" },
+  modalCard: {
+    width: 340,
+    maxWidth: "92%",
+  },
+  modalTitle: { ...appTheme.typography.subtitle, marginBottom: appTheme.spacing.sm, textAlign: "center", color: appTheme.colors.text },
+  input: {
+    borderWidth: 1,
+    borderColor: appTheme.colors.border,
+    borderRadius: appTheme.radius.md,
+    padding: appTheme.spacing.sm,
+    marginBottom: appTheme.spacing.sm,
+    backgroundColor: appTheme.colors.surfaceSoft,
+    color: appTheme.colors.text,
+    ...appTheme.typography.body,
+  },
   row: { flexDirection: "row", gap: 12 },
-  button: {
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    alignItems: "center",
-    width: "90%",
-    maxWidth: 340,
-  },
-  buttonText: { color: "#fff", fontWeight: "700", fontSize: 16 },
-  primaryButton: { backgroundColor: "#021b36ff", flex: 1 },
-  secondaryButton: { backgroundColor: "#888", flex: 1 },
-  syncButton: { backgroundColor: "#191b19ff" },
-  resendButton: { backgroundColor: "#7a220b" },
-  backButton: { backgroundColor: "#666" },
-  disabled: { opacity: 0.7 },
+  flexButton: { flex: 1 },
+  syncButton: { width: "90%", maxWidth: 340, backgroundColor: appTheme.colors.primary },
+  resendButton: { width: "90%", maxWidth: 340, backgroundColor: appTheme.colors.accent },
 });

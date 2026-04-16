@@ -8,9 +8,12 @@ import {
   ScrollView,
   Text,
   TextInput,
-  TouchableOpacity,
   View
 } from "react-native";
+import { AppButton } from "@/components/ui/AppButton";
+import { FormCard } from "@/components/ui/FormCard";
+import { SectionTitle } from "@/components/ui/SectionTitle";
+import { appTheme } from "@/theme/appTheme";
 
 // Defina a senha fixa aqui
 const SENHA_FIXA = "@trafego25";
@@ -135,7 +138,7 @@ export default function ConfiguracaoScreen({ requirePassword = true }: { require
           onRequestClose={() => {}}
         >
           <View style={modalStyles.overlay}>
-            <View style={modalStyles.card}>
+            <FormCard style={modalStyles.card}>
               <Text style={modalStyles.title}>Digite a senha para acessar</Text>
               <TextInput
                 style={styles.input}
@@ -146,27 +149,22 @@ export default function ConfiguracaoScreen({ requirePassword = true }: { require
                 autoFocus
               />
               {erroSenha ? (
-                <Text style={{ color: "red", marginBottom: 8 }}>{erroSenha}</Text>
+                <Text style={{ color: appTheme.colors.danger, marginBottom: 8 }}>{erroSenha}</Text>
               ) : null}
-              <View style={{ flexDirection: "row", marginTop: 24, gap: 12 }}>
-                <TouchableOpacity
-                  style={[styles.button, { backgroundColor: "#021b36ff", flex: 1 }]}
-                  onPress={validarSenha}
-                >
-                  <Text style={styles.buttonText}>Entrar</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.button, { backgroundColor: "#888", flex: 1 }]}
+              <View style={styles.row}>
+                <AppButton label="Entrar" onPress={validarSenha} style={styles.flexButton} />
+                <AppButton
+                  label="Voltar"
+                  variant="secondary"
+                  style={styles.flexButton}
                   onPress={() => {
                     setShowSenhaModal(false);
                     setSenhaDigitada("");
                     setErroSenha("");
                   }}
-                >
-                  <Text style={styles.buttonText}>Voltar</Text>
-                </TouchableOpacity>
+                />
               </View>
-            </View>
+            </FormCard>
           </View>
         </Modal>
 
@@ -175,8 +173,8 @@ export default function ConfiguracaoScreen({ requirePassword = true }: { require
           <ScrollView contentContainerStyle={styles.container}>
             {/* Se houver configuração salva e não estiver preenchendo nova, mostra resumo e botão */}
             {configSalva && !mostrandoNovaConfig ? (
-              <View style={{ marginBottom: 32 }}>
-                <Text style={styles.title}>Configuração Salva</Text>
+              <FormCard style={styles.cardSpacing}>
+                <SectionTitle centered>Configuração Salva</SectionTitle>
                 <Text style={styles.label}>Pesquisador: <Text style={styles.value}>{configSalva.pesquisador}</Text></Text>
                 <Text style={styles.label}>Rodovia: <Text style={styles.value}>{configSalva.rodovia}</Text></Text>
                 <Text style={styles.label}>Posto: <Text style={styles.value}>{configSalva.posto}</Text></Text>
@@ -184,40 +182,33 @@ export default function ConfiguracaoScreen({ requirePassword = true }: { require
                 <Text style={styles.label}>Sentido de: <Text style={styles.value}>{configSalva.sentidoDe}</Text></Text>
                 <Text style={styles.label}>Sentido para: <Text style={styles.value}>{configSalva.sentidoPara}</Text></Text>
                 <Text style={styles.label}>Perguntar bairro: <Text style={styles.value}>{configSalva.perguntarBairro ? 'Sim' : 'Não'}</Text></Text>
-                <TouchableOpacity
-                  style={[styles.button, { backgroundColor: '#021b36ff', marginTop: 18 }]}
+                <AppButton
+                  label="Preencher nova configuração"
                   onPress={() => setMostrandoNovaConfig(true)}
-                >
-                  <Text style={styles.buttonText}>Preencher nova configuração</Text>
-                </TouchableOpacity>
-              </View>
+                  style={{ marginTop: appTheme.spacing.md }}
+                />
+              </FormCard>
             ) : null}
 
             {/* Formulário de configuração (só mostra se não há config salva ou se clicou em nova) */}
             {(!configSalva || mostrandoNovaConfig) && (
-              <>
-                <Text style={styles.title}>Configurar Pesquisa</Text>
+              <FormCard>
+                <SectionTitle centered>Configurar Pesquisa</SectionTitle>
 
                 <Text style={styles.label}>Perguntar bairro de origem e destino?</Text>
-                <View style={{ flexDirection: "row", marginBottom: 16 }}>
-                  <TouchableOpacity
-                    style={[
-                      styles.button,
-                      { backgroundColor: perguntarBairro ? "#021b36ff" : "#888", marginRight: 8 },
-                    ]}
+                <View style={styles.rowSpace}>
+                  <AppButton
+                    label="Sim"
                     onPress={() => setPerguntarBairro(true)}
-                  >
-                    <Text style={styles.buttonText}>Sim</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.button,
-                      { backgroundColor: !perguntarBairro ? "#021b36ff" : "#888" },
-                    ]}
+                    style={styles.flexButton}
+                    variant={perguntarBairro ? "primary" : "secondary"}
+                  />
+                  <AppButton
+                    label="Não"
                     onPress={() => setPerguntarBairro(false)}
-                  >
-                    <Text style={styles.buttonText}>Não</Text>
-                  </TouchableOpacity>
+                    style={styles.flexButton}
+                    variant={!perguntarBairro ? "primary" : "secondary"}
+                  />
                 </View>
 
                 <Text style={styles.label}>Sentido de:</Text>
@@ -285,14 +276,10 @@ export default function ConfiguracaoScreen({ requirePassword = true }: { require
                   placeholder="Nome do pesquisador"
                 />
 
-                <Pressable
-                  style={{ ...styles.button, backgroundColor: "#021b36ff" }}
-                  onPress={salvarConfiguracao}
-                >
-                  <Text style={styles.buttonText}>Salvar</Text>
-                </Pressable>
-                <Pressable
-                  style={{ ...styles.button, backgroundColor: "#072531a4" }}
+                <AppButton label="Salvar" onPress={salvarConfiguracao} />
+                <AppButton
+                  label="Voltar"
+                  variant="secondary"
                   onPress={() => {
                     if (typeof window !== 'undefined' && window.history) {
                       window.history.back();
@@ -300,10 +287,8 @@ export default function ConfiguracaoScreen({ requirePassword = true }: { require
                       Alert.alert('Voltar', 'Função de voltar não disponível nesta plataforma.');
                     }
                   }}
-                >
-                  <Text style={styles.buttonText}>Voltar</Text>
-                </Pressable>
-              </>
+                />
+              </FormCard>
             )}
 
             {/* Modal de resumo */}
@@ -314,7 +299,7 @@ export default function ConfiguracaoScreen({ requirePassword = true }: { require
               onRequestClose={() => setShowResumo(false)}
             >
               <View style={modalStyles.overlay}>
-                <View style={modalStyles.card}>
+                <FormCard style={modalStyles.card}>
                   <Text style={modalStyles.title}>Resumo da Configuração</Text>
                   <Text style={modalStyles.label}>
                     Perguntar bairro: <Text style={modalStyles.value}>{(configSalva?.perguntarBairro ?? perguntarBairro) ? 'Sim' : 'Não'}</Text>
@@ -337,21 +322,11 @@ export default function ConfiguracaoScreen({ requirePassword = true }: { require
                   <Text style={modalStyles.label}>
                     Pesquisador: <Text style={modalStyles.value}>{configSalva?.pesquisador ?? pesquisador}</Text>
                   </Text>
-                  <View style={{ flexDirection: "row", marginTop: 24, gap: 12 }}>
-                    <TouchableOpacity
-                      style={[styles.button, { backgroundColor: "#072531a4", flex: 1 }]}
-                      onPress={() => setShowResumo(false)}
-                    >
-                      <Text style={styles.buttonText}>Alterar</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.button, { backgroundColor: "#021b36ff", flex: 1 }]}
-                      onPress={() => setShowResumo(false)}
-                    >
-                      <Text style={styles.buttonText}>Confirmar</Text>
-                    </TouchableOpacity>
+                  <View style={styles.row}>
+                    <AppButton label="Alterar" variant="secondary" style={styles.flexButton} onPress={() => setShowResumo(false)} />
+                    <AppButton label="Confirmar" style={styles.flexButton} onPress={() => setShowResumo(false)} />
                   </View>
-                </View>
+                </FormCard>
               </View>
             </Modal>
           </ScrollView>
@@ -364,81 +339,68 @@ export default function ConfiguracaoScreen({ requirePassword = true }: { require
 const modalStyles = {
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: 'rgba(15,23,42,0.45)',
     justifyContent: 'center' as const,
     alignItems: 'center' as const,
     padding: 16,
   },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 24,
     width: '100%',
     maxWidth: 400,
     alignItems: 'stretch' as const,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
   },
   title: {
-    fontSize: 20,
-    fontWeight: '700' as const,
-    marginBottom: 16,
+    ...appTheme.typography.subtitle,
+    marginBottom: appTheme.spacing.sm,
     textAlign: 'center' as const,
+    color: appTheme.colors.text,
   },
   label: {
-    fontSize: 16,
-    fontWeight: '700' as const,
-    marginTop: 8,
+    ...appTheme.typography.label,
+    marginTop: appTheme.spacing.xs,
+    color: appTheme.colors.text,
   },
   value: {
     fontWeight: '400' as const,
+    color: appTheme.colors.textMuted,
   },
 };
 
 // Estilos principais da tela
 const styles = {
   container: {
-    padding: 24,
-    paddingBottom: 48,
-    backgroundColor: '#f9f9f9',
+    padding: appTheme.spacing.xl,
+    paddingBottom: appTheme.spacing.xl,
+    backgroundColor: appTheme.colors.background,
     flexGrow: 1,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
-    backgroundColor: '#fff',
-    fontSize: 16,
-  },
-  button: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    alignItems: 'center' as const,
-    marginBottom: 8,
-  },
-  buttonText: {
-    color: '#fff',
-    fontWeight: '700' as const,
-    fontSize: 16,
+    borderColor: appTheme.colors.border,
+    borderRadius: appTheme.radius.md,
+    padding: appTheme.spacing.sm,
+    marginBottom: appTheme.spacing.md,
+    backgroundColor: appTheme.colors.surfaceSoft,
+    ...appTheme.typography.body,
+    color: appTheme.colors.text,
   },
   title: {
-    fontSize: 22,
-    fontWeight: '700' as const,
-    marginBottom: 18,
+    ...appTheme.typography.subtitle,
+    marginBottom: appTheme.spacing.md,
     textAlign: 'center' as const,
+    color: appTheme.colors.text,
   },
   label: {
-    fontSize: 16,
-    fontWeight: '700' as const,
+    ...appTheme.typography.label,
     marginBottom: 4,
+    color: appTheme.colors.text,
   },
   value: {
     fontWeight: '400' as const,
+    color: appTheme.colors.textMuted,
   },
+  row: { flexDirection: "row", marginTop: appTheme.spacing.lg, gap: appTheme.spacing.sm },
+  rowSpace: { flexDirection: "row", marginBottom: appTheme.spacing.md, gap: appTheme.spacing.xs },
+  flexButton: { flex: 1 },
+  cardSpacing: { marginBottom: appTheme.spacing.xl },
 };

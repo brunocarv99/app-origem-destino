@@ -1,69 +1,68 @@
+import { FormCard } from "@/components/ui/FormCard";
+import { SectionTitle } from "@/components/ui/SectionTitle";
+import { appTheme } from "@/theme/appTheme";
 import { Link } from "expo-router";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 
 export default function HomeScreen() {
   return (
     <View style={styles.container}>
-      <View style={styles.logoWrapper}>
-        <Image
-          source={require("../assets/images/logo.png")}
-          style={styles.logo}
-          resizeMode="contain"
-        />
-        <View style={styles.subtitleRow}>
-          <Text style={styles.subtitle}>A servico do DER/MG</Text>
+      <View style={styles.content}>
+        <View style={styles.logoWrapper}>
           <Image
-            source={require("../assets/images/logo-der.png")}
-            style={styles.logoDer}
+            source={require("../assets/images/logo.png")}
+            style={styles.logo}
             resizeMode="contain"
           />
+          <View style={styles.subtitleRow}>
+            <Text style={styles.subtitle}>A serviço do DER/MG</Text>
+            <Image
+              source={require("../assets/images/logo-der.png")}
+              style={styles.logoDer}
+              resizeMode="contain"
+            />
+          </View>
         </View>
-      </View>
 
-      <View style={styles.content}>
-        <View style={styles.titleRow}>
-          <Text style={styles.title}>PESQUISA ORIGEM-DESTINO</Text>
+        <View style={styles.headerBand}>
+          <Text style={styles.helperText}>Escolha uma ação para começar.</Text>
         </View>
 
-        <Link href={{ pathname: "/pesquisa", params: { tipo: "passeio" } }} asChild>
-          <Pressable style={styles.button}>
-            <Text style={styles.buttonText}>Iniciar pesquisa - Passeio</Text>
-          </Pressable>
-        </Link>
+        <FormCard style={styles.actionsCard}>
+          <SectionTitle centered style={styles.sectionTitle}>Iniciar Entrevistas</SectionTitle>
 
-        <Link href={{ pathname: "/pesquisa", params: { tipo: "caminhao" } }} asChild>
-          <Pressable style={styles.button}>
-            <Text style={styles.buttonText}>Iniciar pesquisa - Caminhao</Text>
-          </Pressable>
-        </Link>
+          <Link href={{ pathname: "/pesquisa", params: { tipo: "passeio" } }} asChild>
+            <Pressable style={styles.primaryActionButton}>
+              <Text style={styles.buttonText}>Passeio</Text>
+            </Pressable>
+          </Link>
 
-        <Link href={{ pathname: "/pesquisa", params: { tipo: "onibus" } }} asChild>
-          <Pressable style={styles.button}>
-            <Text style={styles.buttonText}>Iniciar pesquisa - Onibus</Text>
-          </Pressable>
-        </Link>
+          <Link href={{ pathname: "/pesquisa", params: { tipo: "caminhao" } }} asChild>
+            <Pressable style={styles.primaryActionButton}>
+              <Text style={styles.buttonText}>Caminhão</Text>
+            </Pressable>
+          </Link>
 
-        <Link href="/admin" asChild>
-          <Pressable
-            style={{
-              ...styles.button,
-              backgroundColor: "#072531a4",
-            }}
-          >
-            <Text style={styles.buttonText}>Configurar Pesquisa</Text>
-          </Pressable>
-        </Link>
+          <Link href={{ pathname: "/pesquisa", params: { tipo: "onibus" } }} asChild>
+            <Pressable style={styles.primaryActionButton}>
+              <Text style={styles.buttonText}>Ônibus</Text>
+            </Pressable>
+          </Link>
+        </FormCard>
 
-        <Link href="/sincronizacao" asChild>
-          <Pressable
-            style={{
-              ...styles.button,
-              backgroundColor: "#191b19ff",
-            }}
-          >
-            <Text style={styles.buttonText}>Enviar Pesquisas</Text>
-          </Pressable>
-        </Link>
+        <View style={styles.managementRow}>
+          <Link href="/admin" asChild>
+            <Pressable style={styles.secondaryActionButton}>
+              <Text style={styles.buttonText}>Configurar Pesquisa</Text>
+            </Pressable>
+          </Link>
+
+          <Link href="/sincronizacao" asChild>
+            <Pressable style={styles.darkActionButton}>
+              <Text style={styles.buttonText}>Enviar Pesquisas</Text>
+            </Pressable>
+          </Link>
+        </View>
       </View>
     </View>
   );
@@ -72,67 +71,108 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f2f2f2",
+    backgroundColor: appTheme.colors.background,
     alignItems: "center",
   },
   logoWrapper: {
     width: "100%",
     alignItems: "center",
-    marginTop: 15,
-    marginBottom: 0,
+    marginBottom: appTheme.spacing.xs,
   },
   logo: {
-    width: 200,
-    height: 200,
+    width: 182,
+    height: 182,
   },
   content: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     width: "100%",
-    marginTop: -40,
+    paddingHorizontal: appTheme.spacing.md,
+    paddingBottom: 24,
   },
+  headerBand: {
+    width: "100%",
+    maxWidth: 440,
+    marginTop: 0,
+    marginBottom: appTheme.spacing.sm,
+    alignItems: "center",
+  },
+  actionsCard: { maxWidth: 440 },
   subtitleRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 8,
+    marginBottom: appTheme.spacing.sm,
     marginTop: 0,
     width: "100%",
   },
   subtitle: {
-    fontSize: 20,
-    color: "#555",
-    marginRight: 2,
-    fontWeight: "bold",
+    ...appTheme.typography.label,
+    color: "#4B5563",
+    marginRight: appTheme.spacing.xs,
   },
   logoDer: {
     width: 35,
     height: 35,
   },
-  titleRow: {
+  helperText: {
+    ...appTheme.typography.body,
+    color: appTheme.colors.textMuted,
+    textAlign: "center",
+    marginTop: 2,
+  },
+  sectionTitle: {
+    alignSelf: "center",
+    color: appTheme.colors.primaryStrong,
+    backgroundColor: "#EEF2F7",
+    paddingHorizontal: appTheme.spacing.sm,
+    paddingVertical: appTheme.spacing.xs,
+    borderRadius: 999,
+    marginBottom: appTheme.spacing.sm,
+  },
+  primaryActionButton: {
+    backgroundColor: appTheme.colors.primary,
+    paddingVertical: appTheme.spacing.sm,
+    paddingHorizontal: appTheme.spacing.sm,
+    borderRadius: appTheme.radius.md,
+    marginVertical: 5,
+    width: "100%",
+    minHeight: 46,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  managementRow: {
+    marginTop: appTheme.spacing.sm,
+    width: "100%",
+    maxWidth: 440,
     flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 18,
+    gap: appTheme.spacing.xs,
   },
-  title: {
-    fontSize: 16,
-    fontWeight: "bold",
-    marginRight: 8,
-  },
-  button: {
-    backgroundColor: "#021b36ff",
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    marginVertical: 6,
-    width: "90%",
-    maxWidth: 320,
+  secondaryActionButton: {
+    backgroundColor: appTheme.colors.accent,
+    paddingVertical: appTheme.spacing.sm,
+    paddingHorizontal: appTheme.spacing.sm,
+    borderRadius: appTheme.radius.md,
+    marginVertical: 4,
+    width: "50%",
+    minHeight: 46,
     alignItems: "center",
+    justifyContent: "center",
+  },
+  darkActionButton: {
+    backgroundColor: "#1F2937",
+    paddingVertical: appTheme.spacing.sm,
+    paddingHorizontal: appTheme.spacing.sm,
+    borderRadius: appTheme.radius.md,
+    marginVertical: 4,
+    width: "50%",
+    minHeight: 46,
+    alignItems: "center",
+    justifyContent: "center",
   },
   buttonText: {
     color: "#fff",
-    fontSize: 15,
-    fontWeight: "600",
+    ...appTheme.typography.button,
   },
 });
