@@ -18,13 +18,29 @@ import { appTheme } from "@/theme/appTheme";
 // Defina a senha fixa aqui
 const SENHA_FIXA = "@trafego25";
 
+function sanitizarDecimalComSinal(texto: string) {
+  const sanitized = texto.replace(/,/g, '.').replace(/[^0-9.-]/g, '');
+  const semSinaisDuplicados = sanitized.replace(/(?!^)-/g, '');
+  const parts = semSinaisDuplicados.split('.');
+  return parts.length > 2 ? `${parts[0]}.${parts.slice(1).join('')}` : semSinaisDuplicados;
+}
+
 export default function ConfiguracaoScreen({ requirePassword = true }: { requirePassword?: boolean }) {
         // Função para salvar configuração
     async function salvarConfiguracao() {
-      if (!pesquisador || !rodovia || !posto || !data || !sentidoDe || !sentidoPara) {
+      if (!pesquisador || !rodovia || !posto || !data || !sentidoDe || !sentidoPara || !latitude || !longitude) {
         Alert.alert('Erro', 'Preencha todos os campos obrigatórios.');
         return;
       }
+
+      const latitudeNumero = Number(latitude);
+      const longitudeNumero = Number(longitude);
+
+      if (Number.isNaN(latitudeNumero) || Number.isNaN(longitudeNumero)) {
+        Alert.alert('Erro', 'Latitude e longitude devem ser números válidos.');
+        return;
+      }
+
       const novaConfig = {
         pesquisador,
         rodovia,
@@ -32,6 +48,8 @@ export default function ConfiguracaoScreen({ requirePassword = true }: { require
         data,
         sentidoDe,
         sentidoPara,
+        latitude,
+        longitude,
         perguntarBairro,
       };
       setConfigSalva(novaConfig);
@@ -44,7 +62,9 @@ export default function ConfiguracaoScreen({ requirePassword = true }: { require
         data: novaConfig.data ?? '',
         posto: novaConfig.posto ?? '',
         rodovia: novaConfig.rodovia ?? '',
-        pesquisador: novaConfig.pesquisador ?? ''
+        pesquisador: novaConfig.pesquisador ?? '',
+        latitude: latitudeNumero,
+        longitude: longitudeNumero,
       };
       await AsyncStorage.setItem('respostasFixas', JSON.stringify(respostasFixas));
       setMostrandoNovaConfig(false);
@@ -58,6 +78,8 @@ export default function ConfiguracaoScreen({ requirePassword = true }: { require
       data: string;
       sentidoDe: string;
       sentidoPara: string;
+      latitude: string;
+      longitude: string;
       perguntarBairro: boolean;
     };
     // Estado para configuração salva
@@ -74,6 +96,8 @@ export default function ConfiguracaoScreen({ requirePassword = true }: { require
     const [data, setData] = useState("");
     const [sentidoDe, setSentidoDe] = useState("");
     const [sentidoPara, setSentidoPara] = useState("");
+    const [latitude, setLatitude] = useState("");
+    const [longitude, setLongitude] = useState("");
     const [perguntarBairro, setPerguntarBairro] = useState(false);
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [showResumo, setShowResumo] = useState(false);
@@ -103,6 +127,8 @@ export default function ConfiguracaoScreen({ requirePassword = true }: { require
             setData(config.data);
             setSentidoDe(config.sentidoDe);
             setSentidoPara(config.sentidoPara);
+            setLatitude(config.latitude ?? "");
+            setLongitude(config.longitude ?? "");
             setPerguntarBairro(config.perguntarBairro);
           }
         } catch (error) {
@@ -181,6 +207,8 @@ export default function ConfiguracaoScreen({ requirePassword = true }: { require
                 <Text style={styles.label}>Data: <Text style={styles.value}>{configSalva.data}</Text></Text>
                 <Text style={styles.label}>Sentido de: <Text style={styles.value}>{configSalva.sentidoDe}</Text></Text>
                 <Text style={styles.label}>Sentido para: <Text style={styles.value}>{configSalva.sentidoPara}</Text></Text>
+                <Text style={styles.label}>Latitude: <Text style={styles.value}>{configSalva.latitude}</Text></Text>
+                <Text style={styles.label}>Longitude: <Text style={styles.value}>{configSalva.longitude}</Text></Text>
                 <Text style={styles.label}>Perguntar bairro: <Text style={styles.value}>{configSalva.perguntarBairro ? 'Sim' : 'Não'}</Text></Text>
                 <AppButton
                   label="Preencher nova configuração"
@@ -276,6 +304,23 @@ export default function ConfiguracaoScreen({ requirePassword = true }: { require
                   placeholder="Nome do pesquisador"
                 />
 
+                <Text style={styles.label}>Latitude:</Text>
+                <TextInput
+                  style={styles.input}
+                  value={latitude}
+                  onChangeText={(text) => setLatitude(sanitizarDecimalComSinal(text))}
+                  placeholder="Ex.: -19.9286"
+                  keyboardType="numbers-and-punctuation"
+                />
+                <Text style={styles.label}>Longitude:</Text>
+                <TextInput
+                  style={styles.input}
+                  value={longitude}
+                  onChangeText={(text) => setLongitude(sanitizarDecimalComSinal(text))}
+                  placeholder="Ex.: -43.9386"
+                  keyboardType="numbers-and-punctuation"
+                />
+
                 <AppButton label="Salvar" onPress={salvarConfiguracao} />
                 <AppButton
                   label="Voltar"
@@ -321,6 +366,12 @@ export default function ConfiguracaoScreen({ requirePassword = true }: { require
                   </Text>
                   <Text style={modalStyles.label}>
                     Pesquisador: <Text style={modalStyles.value}>{configSalva?.pesquisador ?? pesquisador}</Text>
+                  </Text>
+                  <Text style={modalStyles.label}>
+                    Latitude: <Text style={modalStyles.value}>{configSalva?.latitude ?? latitude}</Text>
+                  </Text>
+                  <Text style={modalStyles.label}>
+                    Longitude: <Text style={modalStyles.value}>{configSalva?.longitude ?? longitude}</Text>
                   </Text>
                   <View style={styles.row}>
                     <AppButton label="Alterar" variant="secondary" style={styles.flexButton} onPress={() => setShowResumo(false)} />

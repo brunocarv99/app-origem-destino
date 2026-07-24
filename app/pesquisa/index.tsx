@@ -10,6 +10,10 @@ function removerAcentos(str: string) {
   return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
 
+function normalizarBusca(str: string) {
+  return removerAcentos((str || "").trim().toLocaleLowerCase());
+}
+
 function sanitizarDecimal(texto: string) {
   const sanitized = texto.replace(/,/g, '.').replace(/[^0-9.]/g, '');
   const parts = sanitized.split('.');
@@ -123,28 +127,28 @@ const eixosPorClasse = {
 
 // Limites por classe (em toneladas)
 const limitesPorClasse = {
-  "2C (2 eixos)": { tara: [5, 15], pbt: [11, 21], capacidade: [4, 8] },
-  "3C (3 eixos)": { tara: [6, 16], pbt: [18, 28], capacidade: [7, 17] },
-  "2S1 (3 eixos)": { tara: [6.5, 16.5], pbt: [21, 31], capacidade: [9.5, 19.5] },
-  "4CD (4 eixos)": { tara: [7, 17], pbt: [21, 31], capacidade: [9, 19] },
-  "2C2 (4 eixos)": { tara: [10, 20], pbt: [33, 43], capacidade: [18, 28] },
-  "2S2 (4 eixos)": { tara: [10, 20], pbt: [28, 38], capacidade: [13, 23] },
-  "2I2 (4 eixos)": { tara: [10, 20], pbt: [31, 41], capacidade: [16, 26] },
-  "2C3 (5 eixos)": { tara: [13, 19], pbt: [31, 61], capacidade: [18, 42] },
-  "3C2 (5 eixos)": { tara: [13, 19], pbt: [31, 61], capacidade: [18, 42] },
-  "2S3 (5 eixos)": { tara: [11, 17], pbt: [29, 59], capacidade: [18, 42] },
-  "3S2 (5 eixos)": { tara: [13, 19], pbt: [31, 61], capacidade: [18, 42] },
-  "2I3 (5 eixos)": { tara: [13, 19], pbt: [31, 61], capacidade: [18, 42] },
-  "3I2 (5 eixos)": { tara: [13, 19], pbt: [31, 61], capacidade: [18, 42] },
-  "2J3 (5 eixos)": { tara: [13, 19], pbt: [31, 61], capacidade: [18, 42] },
-  "3C3 (6 eixos)": { tara: [14, 21], pbt: [38, 68], capacidade: [24, 47] },
-  "3J3 (6 eixos)": { tara: [14, 21], pbt: [38, 68], capacidade: [24, 47] },
-  "3I3 (6 eixos)": { tara: [17, 24], pbt: [41, 71], capacidade: [24, 47] },
-  "3S3 (6 eixos)": { tara: [12, 19], pbt: [36, 66], capacidade: [24, 47] },
-  "BITREM 3S2S2 (7 eixos)": { tara: [20, 23], pbt: [45, 75], capacidade: [25, 52] },
-  "RODOTREM 3S2C4 (9 eixos)": { tara: [19, 25], pbt: [45, 75], capacidade: [26, 70] },
-  "TRITREM 3S2S2S2 (9 eixos)": { tara: [23, 37], pbt: [63, 93], capacidade: [26, 70] },
-  "3M6 (9 eixos)": { tara: [23, 37], pbt: [63, 93], capacidade: [26, 70] },
+  "2C (2 eixos)": { tara: [1, 20], pbt: [6, 26], capacidade: [1, 13] },
+  "3C (3 eixos)": { tara: [1, 21], pbt: [13, 33], capacidade: [2, 22] },
+  "2S1 (3 eixos)": { tara: [1.5, 21.5], pbt: [16, 36], capacidade: [4.5, 24.5] },
+  "4CD (4 eixos)": { tara: [2, 22], pbt: [16, 36], capacidade: [4, 24] },
+  "2C2 (4 eixos)": { tara: [5, 25], pbt: [28, 48], capacidade: [13, 33] },
+  "2S2 (4 eixos)": { tara: [5, 25], pbt: [23, 43], capacidade: [8, 28] },
+  "2I2 (4 eixos)": { tara: [5, 25], pbt: [26, 46], capacidade: [11, 31] },
+  "2C3 (5 eixos)": { tara: [3, 29], pbt: [21, 71], capacidade: [8, 52] },
+  "3C2 (5 eixos)": { tara: [3, 29], pbt: [21, 71], capacidade: [8, 52] },
+  "2S3 (5 eixos)": { tara: [1, 27], pbt: [19, 69], capacidade: [8, 52] },
+  "3S2 (5 eixos)": { tara: [3, 29], pbt: [21, 71], capacidade: [8, 52] },
+  "2I3 (5 eixos)": { tara: [3, 29], pbt: [21, 71], capacidade: [8, 52] },
+  "3I2 (5 eixos)": { tara: [3, 29], pbt: [21, 71], capacidade: [8, 52] },
+  "2J3 (5 eixos)": { tara: [3, 29], pbt: [21, 71], capacidade: [8, 52] },
+  "3C3 (6 eixos)": { tara: [4, 31], pbt: [28, 78], capacidade: [14, 57] },
+  "3J3 (6 eixos)": { tara: [4, 31], pbt: [28, 78], capacidade: [14, 57] },
+  "3I3 (6 eixos)": { tara: [7, 34], pbt: [31, 81], capacidade: [14, 57] },
+  "3S3 (6 eixos)": { tara: [2, 29], pbt: [26, 76], capacidade: [14, 57] },
+  "BITREM 3S2S2 (7 eixos)": { tara: [10, 33], pbt: [35, 85], capacidade: [15, 62] },
+  "RODOTREM 3S2C4 (9 eixos)": { tara: [9, 35], pbt: [35, 85], capacidade: [16, 80] },
+  "TRITREM 3S2S2S2 (9 eixos)": { tara: [13, 47], pbt: [53, 103], capacidade: [16, 80] },
+  "3M6 (9 eixos)": { tara: [13, 47], pbt: [53, 103], capacidade: [16, 80] },
 };
 
 const maxOcupantesPorTipo = {
@@ -684,7 +688,7 @@ export default function Pesquisa() {
     const classeLimites = limitesPorClasse[classeCaminhao];
 
     return (
-      <ScrollView contentContainerStyle={[styles.container, { paddingBottom: 48 }]} keyboardShouldPersistTaps="always">
+      <ScrollView contentContainerStyle={[styles.container, { paddingBottom: 48 }]} keyboardShouldPersistTaps="always" nestedScrollEnabled>
         <Text style={styles.title}>Pesquisa OD - Caminhão</Text>
         <Text style={styles.label}>Classe selecionada:</Text>
         <Text style={styles.tipoVeiculoSelecionado}>{classeCaminhao}</Text>
@@ -732,14 +736,14 @@ export default function Pesquisa() {
         )}
         {
           (() => {
-            const filtered = cidadesOrigemItems.filter(it =>
-              removerAcentos(it.label.toLowerCase()).includes(removerAcentos(cidadeBuscaOrigem.toLowerCase()))
+            const filtered = cidadesOrigemItems.filter((it) =>
+              normalizarBusca(it.label).includes(normalizarBusca(cidadeBuscaOrigem))
             );
             return (
               openOrigem && cidadeBuscaOrigem ? (
                 filtered.length > 0 ? (
                   <View style={styles.suggestionContainer}>
-                    <ScrollView style={{ maxHeight: 200 }} keyboardShouldPersistTaps="always">
+                    <ScrollView style={{ maxHeight: 200 }} keyboardShouldPersistTaps="always" nestedScrollEnabled>
                       {filtered.map((it) => (
                         <TouchableOpacity
                           key={it.value}
@@ -812,14 +816,14 @@ export default function Pesquisa() {
         )}
         {
           (() => {
-            const filtered = cidadesDestinoItems.filter(it =>
-              removerAcentos(it.label.toLowerCase()).includes(removerAcentos(cidadeBuscaDestino.toLowerCase()))
+            const filtered = cidadesDestinoItems.filter((it) =>
+              normalizarBusca(it.label).includes(normalizarBusca(cidadeBuscaDestino))
             );
             return (
               openDestino && cidadeBuscaDestino ? (
                 filtered.length > 0 ? (
                   <View style={styles.suggestionContainer}>
-                    <ScrollView style={{ maxHeight: 200 }} keyboardShouldPersistTaps="always">
+                    <ScrollView style={{ maxHeight: 200 }} keyboardShouldPersistTaps="always" nestedScrollEnabled>
                       {filtered.map((it) => (
                         <TouchableOpacity
                           key={it.value}
@@ -880,6 +884,18 @@ export default function Pesquisa() {
         </Picker>
 
 
+        <Text style={styles.label}>Veículo carregado?</Text>
+        <Picker
+          selectedValue={carregado}
+          onValueChange={setCarregado}
+          style={styles.input}
+        >
+          <Picker.Item label="Selecione" value="" />
+          {carregadoOpcoes.map((item) => (
+            <Picker.Item key={item} label={item} value={item} />
+          ))}
+        </Picker>
+
         <Text style={styles.label}>Qual carga transportada (ou usualmente transportada)?</Text>
         <Picker
           selectedValue={mercadoria}
@@ -901,17 +917,20 @@ export default function Pesquisa() {
           />
         )}
 
-        <Text style={styles.label}>Veículo carregado?</Text>
-        <Picker
-          selectedValue={carregado}
-          onValueChange={setCarregado}
-          style={styles.input}
-        >
-          <Picker.Item label="Selecione" value="" />
-          {carregadoOpcoes.map((item) => (
-            <Picker.Item key={item} label={item} value={item} />
-          ))}
-        </Picker>
+        {carregado === "Sim" && (
+          <>
+            <Text style={styles.label}>Peso da Carga em toneladas:</Text>
+            <TextInput
+              style={styles.input}
+              value={pesoCarga}
+              onChangeText={(text) => setPesoCarga(sanitizarDecimal(text))}
+              editable={true}
+              placeholder={classeLimites ? `Máximo: ${classeLimites.capacidade[1]} t` : 'Digite o peso da carga'}
+              keyboardType="numeric"
+              placeholderTextColor="#888"
+            />
+          </>
+        )}
 
         <Text style={styles.label}>Peso bruto do veículo em toneladas (Peso do veículo + capacidade):</Text>
         <TextInput
@@ -932,21 +951,6 @@ export default function Pesquisa() {
           placeholder={classeLimites ? `Limite: ${classeLimites.tara[0]}–${classeLimites.tara[1]} t` : "Digite o peso da tara"}
           placeholderTextColor="#888"
         />
-
-        {carregado === "Sim" && (
-          <>
-            <Text style={styles.label}>Peso da Carga em toneladas:</Text>
-            <TextInput
-              style={styles.input}
-              value={pesoCarga}
-              onChangeText={(text) => setPesoCarga(sanitizarDecimal(text))}
-              editable={true}
-              placeholder={classeLimites ? `Limite: ${classeLimites.capacidade[0]}–${classeLimites.capacidade[1]} t` : 'Digite o peso da carga'}
-              keyboardType="numeric"
-              placeholderTextColor="#888"
-            />
-          </>
-        )}
 
         <Text style={styles.label}>Renda familiar:</Text>
         <Picker
@@ -1045,7 +1049,7 @@ export default function Pesquisa() {
                 }
                 const [taraMin, taraMax] = classeLimites.tara;
                 const [pbtMin, pbtMax] = classeLimites.pbt;
-                const [capacidadeMin, capacidadeMax] = classeLimites.capacidade;
+                const [, capacidadeMax] = classeLimites.capacidade;
 
                 const pesoBrutoNum = Number(pesoBruto);
                 const taraNum = Number(tara);
@@ -1066,8 +1070,8 @@ export default function Pesquisa() {
                   return;
                 }
 
-                if (carregado === "Sim" && pesoCargaNum !== null && (pesoCargaNum < capacidadeMin || pesoCargaNum > capacidadeMax)) {
-                  Alert.alert(`Peso da carga fora dos limites para a classe selecionada (${capacidadeMin}–${capacidadeMax}t).`);
+                if (carregado === "Sim" && pesoCargaNum !== null && pesoCargaNum > capacidadeMax) {
+                  Alert.alert(`Peso da carga acima do limite para a classe selecionada (máximo de ${capacidadeMax}t).`);
                   return;
                 }
                
@@ -1175,7 +1179,7 @@ export default function Pesquisa() {
     const maxOcupantes = maxOcupantesPorTipo[tipoVeiculo] || 7;
     const ocupantesOptions = Array.from({ length: maxOcupantes }, (_, i) => String(i + 1));
     return (
-      <ScrollView contentContainerStyle={[styles.container, { paddingBottom: 48 }]} keyboardShouldPersistTaps="always">
+      <ScrollView contentContainerStyle={[styles.container, { paddingBottom: 48 }]} keyboardShouldPersistTaps="always" nestedScrollEnabled>
         <Text style={styles.title}>Pesquisa OD - {tipoVeiculo}</Text>
         <Text style={styles.label}>Tipo de veículo selecionado:</Text>
         <Text style={styles.tipoVeiculoSelecionado}>{tipoVeiculo}</Text>
@@ -1217,14 +1221,14 @@ export default function Pesquisa() {
         )}
         {
           (() => {
-            const filtered = cidadesOrigemItems.filter(it =>
-              removerAcentos(it.label.toLowerCase()).includes(removerAcentos(cidadeBuscaOrigem.toLowerCase()))
+            const filtered = cidadesOrigemItems.filter((it) =>
+              normalizarBusca(it.label).includes(normalizarBusca(cidadeBuscaOrigem))
             );
             return (
               openOrigem && cidadeBuscaOrigem ? (
                 filtered.length > 0 ? (
                   <View style={styles.suggestionContainer}>
-                    <ScrollView style={{ maxHeight: 200 }} keyboardShouldPersistTaps="always">
+                    <ScrollView style={{ maxHeight: 200 }} keyboardShouldPersistTaps="always" nestedScrollEnabled>
                       {filtered.map((it) => (
                         <TouchableOpacity
                           key={it.value}
@@ -1297,14 +1301,14 @@ export default function Pesquisa() {
         )}
         {
           (() => {
-            const filtered = cidadesDestinoItems.filter(it =>
-              removerAcentos(it.label.toLowerCase()).includes(removerAcentos(cidadeBuscaDestino.toLowerCase()))
+            const filtered = cidadesDestinoItems.filter((it) =>
+              normalizarBusca(it.label).includes(normalizarBusca(cidadeBuscaDestino))
             );
             return (
               openDestino && cidadeBuscaDestino ? (
                 filtered.length > 0 ? (
                   <View style={styles.suggestionContainer}>
-                    <ScrollView style={{ maxHeight: 200 }} keyboardShouldPersistTaps="always">
+                    <ScrollView style={{ maxHeight: 200 }} keyboardShouldPersistTaps="always" nestedScrollEnabled>
                       {filtered.map((it) => (
                         <TouchableOpacity
                           key={it.value}
@@ -1544,7 +1548,7 @@ export default function Pesquisa() {
     const cidadesDestino = getCidadesPorUf(destinoUf);
 
     return (
-      <ScrollView contentContainerStyle={[styles.container, { paddingBottom: 48 }]} keyboardShouldPersistTaps="always">
+      <ScrollView contentContainerStyle={[styles.container, { paddingBottom: 48 }]} keyboardShouldPersistTaps="always" nestedScrollEnabled>
         <Text style={styles.title}>Pesquisa OD - Ônibus</Text>
         <Text style={styles.label}>Tipo de ônibus selecionado:</Text>
         <Text style={styles.tipoVeiculoSelecionado}>
@@ -1588,14 +1592,14 @@ export default function Pesquisa() {
         )}
         {
           (() => {
-            const filtered = cidadesOrigemItems.filter(it =>
-              removerAcentos(it.label.toLowerCase()).includes(removerAcentos(cidadeBuscaOrigem.toLowerCase()))
+            const filtered = cidadesOrigemItems.filter((it) =>
+              normalizarBusca(it.label).includes(normalizarBusca(cidadeBuscaOrigem))
             );
             return (
               openOrigem && cidadeBuscaOrigem ? (
                 filtered.length > 0 ? (
                   <View style={styles.suggestionContainer}>
-                    <ScrollView style={{ maxHeight: 200 }} keyboardShouldPersistTaps="always">
+                    <ScrollView style={{ maxHeight: 200 }} keyboardShouldPersistTaps="always" nestedScrollEnabled>
                       {filtered.map((it) => (
                         <TouchableOpacity
                           key={it.value}
@@ -1668,14 +1672,14 @@ export default function Pesquisa() {
         )}
         {
           (() => {
-            const filtered = cidadesDestinoItems.filter(it =>
-              removerAcentos(it.label.toLowerCase()).includes(removerAcentos(cidadeBuscaDestino.toLowerCase()))
+            const filtered = cidadesDestinoItems.filter((it) =>
+              normalizarBusca(it.label).includes(normalizarBusca(cidadeBuscaDestino))
             );
             return (
               openDestino && cidadeBuscaDestino ? (
                 filtered.length > 0 ? (
                   <View style={styles.suggestionContainer}>
-                    <ScrollView style={{ maxHeight: 200 }} keyboardShouldPersistTaps="always">
+                    <ScrollView style={{ maxHeight: 200 }} keyboardShouldPersistTaps="always" nestedScrollEnabled>
                       {filtered.map((it) => (
                         <TouchableOpacity
                           key={it.value}
@@ -1798,38 +1802,61 @@ export default function Pesquisa() {
 
 const  styles = StyleSheet.create({
   container: {
-    padding: appTheme.spacing.sm,
-    backgroundColor: appTheme.colors.background,
+    width: "100%",
+    maxWidth: 640,
+    alignSelf: "center",
+    paddingVertical: appTheme.spacing.lg,
+    paddingHorizontal: appTheme.spacing.lg,
+    backgroundColor: appTheme.colors.surface,
     flexGrow: 1,
-    justifyContent: "center",
+    justifyContent: "flex-start",
     alignItems: "center",
+    borderRadius: appTheme.radius.xl,
+    borderWidth: 1,
+    borderColor: "#E6EAF0",
+    shadowColor: appTheme.colors.shadow,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.08,
+    shadowRadius: 22,
+    elevation: 4,
   },
   title: {
-    ...appTheme.typography.subtitle,
-    marginBottom: appTheme.spacing.md,
+    ...appTheme.typography.title,
+    fontSize: 18,
+    lineHeight: 24,
+    marginBottom: appTheme.spacing.lg,
     textAlign: "center",
-    color: appTheme.colors.text,
+    color: appTheme.colors.primaryStrong,
   },
   label: {
     ...appTheme.typography.label,
+    fontSize: 15,
+    lineHeight: 20,
     marginBottom: appTheme.spacing.xs,
     alignSelf: "flex-start",
     marginLeft: "5%",
-    color: appTheme.colors.text,
+    color: appTheme.colors.primaryStrong,
   },
   input: {
     borderWidth: 1,
-    borderColor: appTheme.colors.border,
-    borderRadius: appTheme.radius.md,
-    padding: appTheme.spacing.sm,
-    marginBottom: appTheme.spacing.sm,
+    borderColor: "#D6DEE8",
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 18,
     ...appTheme.typography.body,
-    backgroundColor: appTheme.colors.surface,
+    backgroundColor: "#FFFFFF",
     width: "90%",
     minWidth: 200,
-    maxWidth: 400,
+    maxWidth: 440,
     alignSelf: "center",
     color: appTheme.colors.text,
+    minHeight: 52,
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 1,
   },
   tipoVeiculoRow: {
     flexDirection: "row",
@@ -1839,21 +1866,23 @@ const  styles = StyleSheet.create({
   },
   tipoVeiculoButton: {
     alignItems: "center",
-    padding: 8,
-    borderRadius: appTheme.radius.md,
+    padding: 14,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: appTheme.colors.border,
-    margin: 4,
-    backgroundColor: appTheme.colors.surface,
+    borderColor: "#D9E1EA",
+    margin: 6,
+    backgroundColor: "#FBFCFE",
     shadowColor: appTheme.colors.shadow,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.05,
+    shadowRadius: 14,
     elevation: 2,
   },
   tipoVeiculoButtonSelecionado: {
     borderColor: appTheme.colors.primary,
-    backgroundColor: appTheme.colors.surfaceSoft,
+    borderWidth: 2,
+    backgroundColor: "#F3F7FB",
+    shadowOpacity: 0.1,
   },
   tipoVeiculoImagem: {
   width: 64,
@@ -1862,13 +1891,15 @@ const  styles = StyleSheet.create({
   },
   tipoVeiculoTexto: {
     ...appTheme.typography.label,
-    color: appTheme.colors.text,
+    color: appTheme.colors.primaryStrong,
+    textAlign: "center",
   },
   tipoVeiculoSelecionado: {
     ...appTheme.typography.subtitle,
     color: appTheme.colors.primary,
-    marginBottom: appTheme.spacing.sm,
+    marginBottom: appTheme.spacing.md,
     alignSelf: "center",
+    textAlign: "center",
   },
   dropDownText: {
     fontSize: 16,
@@ -1878,19 +1909,24 @@ const  styles = StyleSheet.create({
     width: '90%',
     maxHeight: 220,
     borderWidth: 1,
-    borderColor: appTheme.colors.border,
-    backgroundColor: appTheme.colors.surface,
+    borderColor: "#D6DEE8",
+    backgroundColor: "#FFFFFF",
     alignSelf: 'center',
-    borderRadius: appTheme.radius.md,
+    borderRadius: 16,
     marginBottom: 12,
     overflow: 'hidden',
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.06,
+    shadowRadius: 14,
+    elevation: 2,
   },
   suggestionItem: {
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#e9edf2',
-    backgroundColor: appTheme.colors.surface,
+    borderBottomColor: '#EDF2F7',
+    backgroundColor: "#FFFFFF",
   },
   suggestionText: {
     ...appTheme.typography.body,
@@ -1899,8 +1935,8 @@ const  styles = StyleSheet.create({
   errorText: {
     color: appTheme.colors.danger,
     fontSize: 14,
-    marginTop: -8,
-    marginBottom: 8,
+    marginTop: -10,
+    marginBottom: 10,
     marginLeft: '5%',
     fontWeight: '600',
   },
@@ -1918,7 +1954,9 @@ const salvarPerguntasFixas = async () => {
       data: config.data ?? '',
       posto: config.posto ?? '',
       rodovia: config.rodovia ?? '',
-      pesquisador: config.pesquisador ?? ''
+      pesquisador: config.pesquisador ?? '',
+      latitude: config.latitude !== undefined && config.latitude !== null && config.latitude !== '' ? Number(config.latitude) : '',
+      longitude: config.longitude !== undefined && config.longitude !== null && config.longitude !== '' ? Number(config.longitude) : ''
     };
     await AsyncStorage.setItem('respostasFixas', JSON.stringify(respostasFixas));
   } catch (e) {
