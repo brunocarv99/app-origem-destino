@@ -1,10 +1,10 @@
+import { appTheme } from "@/theme/appTheme";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Picker } from "@react-native-picker/picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Alert, Button, Image, Keyboard, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import estadosCidades from "../../assets/estados-cidades.json";
-import { appTheme } from "@/theme/appTheme";
 
 function removerAcentos(str: string) {
   return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -127,7 +127,7 @@ const eixosPorClasse = {
 
 // Limites por classe (em toneladas)
 const limitesPorClasse = {
-  "2C (2 eixos)": { tara: [1, 20], pbt: [6, 26], capacidade: [1, 13] },
+  "2C (2 eixos)": { tara: [1, 20], pbt: [3, 26], capacidade: [1, 13] },
   "3C (3 eixos)": { tara: [1, 21], pbt: [13, 33], capacidade: [2, 22] },
   "2S1 (3 eixos)": { tara: [1.5, 21.5], pbt: [16, 36], capacidade: [4.5, 24.5] },
   "4CD (4 eixos)": { tara: [2, 22], pbt: [16, 36], capacidade: [4, 24] },
@@ -413,6 +413,15 @@ export default function Pesquisa() {
   const tipoParam = Array.isArray(tipo) ? tipo[0] : tipo;
   const [etapa, setEtapa] = useState(1);
   const router = useRouter();
+  const formularioScrollRef = useRef<ScrollView>(null);
+  const motivoOutroEmFocoRef = useRef(false);
+  const [motivoOutroEmFoco, setMotivoOutroEmFoco] = useState(false);
+  const [alturaTeclado, setAlturaTeclado] = useState(0);
+
+  const alterarFocoMotivoOutro = (emFoco: boolean) => {
+    motivoOutroEmFocoRef.current = emFoco;
+    setMotivoOutroEmFoco(emFoco);
+  };
 
   // Comuns
   const [origemUf, setOrigemUf] = useState("");
@@ -500,6 +509,22 @@ export default function Pesquisa() {
         setPerguntarBairro(conf.perguntarBairro !== false); // padrão: true
       }
     });
+  }, []);
+
+  useEffect(() => {
+    const tecladoAberto = Keyboard.addListener("keyboardDidShow", event => {
+      if (!motivoOutroEmFocoRef.current) return;
+      setAlturaTeclado(event.endCoordinates.height);
+      setTimeout(() => formularioScrollRef.current?.scrollToEnd({ animated: true }), 100);
+    });
+    const tecladoFechado = Keyboard.addListener("keyboardDidHide", () => {
+      setAlturaTeclado(0);
+    });
+
+    return () => {
+      tecladoAberto.remove();
+      tecladoFechado.remove();
+    };
   }, []);
 
   useEffect(() => {
@@ -688,7 +713,15 @@ export default function Pesquisa() {
     const classeLimites = limitesPorClasse[classeCaminhao];
 
     return (
-      <ScrollView contentContainerStyle={[styles.container, { paddingBottom: 48 }]} keyboardShouldPersistTaps="always" nestedScrollEnabled>
+      <ScrollView
+        ref={formularioScrollRef}
+        contentContainerStyle={[
+          styles.container,
+          { paddingBottom: 48 + (motivoOutroEmFoco ? alturaTeclado : 0) }
+        ]}
+        keyboardShouldPersistTaps="always"
+        nestedScrollEnabled
+      >
         <Text style={styles.title}>Pesquisa OD - Caminhão</Text>
         <Text style={styles.label}>Classe selecionada:</Text>
         <Text style={styles.tipoVeiculoSelecionado}>{classeCaminhao}</Text>
@@ -917,21 +950,6 @@ export default function Pesquisa() {
           />
         )}
 
-        {carregado === "Sim" && (
-          <>
-            <Text style={styles.label}>Peso da Carga em toneladas:</Text>
-            <TextInput
-              style={styles.input}
-              value={pesoCarga}
-              onChangeText={(text) => setPesoCarga(sanitizarDecimal(text))}
-              editable={true}
-              placeholder={classeLimites ? `Máximo: ${classeLimites.capacidade[1]} t` : 'Digite o peso da carga'}
-              keyboardType="numeric"
-              placeholderTextColor="#888"
-            />
-          </>
-        )}
-
         <Text style={styles.label}>Peso bruto do veículo em toneladas (Peso do veículo + capacidade):</Text>
         <TextInput
           style={styles.input}
@@ -951,6 +969,21 @@ export default function Pesquisa() {
           placeholder={classeLimites ? `Limite: ${classeLimites.tara[0]}–${classeLimites.tara[1]} t` : "Digite o peso da tara"}
           placeholderTextColor="#888"
         />
+
+        {carregado === "Sim" && (
+          <>
+            <Text style={styles.label}>Peso da Carga em toneladas:</Text>
+            <TextInput
+              style={styles.input}
+              value={pesoCarga}
+              onChangeText={(text) => setPesoCarga(sanitizarDecimal(text))}
+              editable={true}
+              placeholder={classeLimites ? `Máximo: ${classeLimites.capacidade[1]} t` : 'Digite o peso da carga'}
+              keyboardType="numeric"
+              placeholderTextColor="#888"
+            />
+          </>
+        )}
 
         <Text style={styles.label}>Renda familiar:</Text>
         <Picker
@@ -980,6 +1013,8 @@ export default function Pesquisa() {
             style={styles.input}
             value={motivoViagemOutro}
             onChangeText={setMotivoViagemOutro}
+            onFocus={() => alterarFocoMotivoOutro(true)}
+            onBlur={() => alterarFocoMotivoOutro(false)}
             placeholder="Digite o motivo"
             placeholderTextColor="#222"
           />
@@ -1057,6 +1092,15 @@ export default function Pesquisa() {
 
                 if (isNaN(pesoBrutoNum) || isNaN(taraNum) || (carregado === "Sim" && (pesoCargaNum === null || isNaN(pesoCargaNum)))) {
                   Alert.alert("Preencha os campos numéricos obrigatórios com valores válidos.");
+                  return;
+                }
+
+                if (carregado === "Sim" && pesoCargaNum !== null && pesoCargaNum >= pesoBrutoNum) {
+                  Alert.alert(
+                    "Peso da carga inválido",
+                    "O peso da carga deve ser menor que o peso bruto do veículo. Digite novamente."
+                  );
+                  setPesoCarga("");
                   return;
                 }
 
@@ -1179,7 +1223,15 @@ export default function Pesquisa() {
     const maxOcupantes = maxOcupantesPorTipo[tipoVeiculo] || 7;
     const ocupantesOptions = Array.from({ length: maxOcupantes }, (_, i) => String(i + 1));
     return (
-      <ScrollView contentContainerStyle={[styles.container, { paddingBottom: 48 }]} keyboardShouldPersistTaps="always" nestedScrollEnabled>
+      <ScrollView
+        ref={formularioScrollRef}
+        contentContainerStyle={[
+          styles.container,
+          { paddingBottom: 48 + (motivoOutroEmFoco ? alturaTeclado : 0) }
+        ]}
+        keyboardShouldPersistTaps="always"
+        nestedScrollEnabled
+      >
         <Text style={styles.title}>Pesquisa OD - {tipoVeiculo}</Text>
         <Text style={styles.label}>Tipo de veículo selecionado:</Text>
         <Text style={styles.tipoVeiculoSelecionado}>{tipoVeiculo}</Text>
@@ -1396,6 +1448,8 @@ export default function Pesquisa() {
             style={styles.input}
             value={motivoViagemOutro}
             onChangeText={setMotivoViagemOutro}
+            onFocus={() => alterarFocoMotivoOutro(true)}
+            onBlur={() => alterarFocoMotivoOutro(false)}
             placeholder="Digite o motivo"
             placeholderTextColor="#222"
           />
@@ -1979,3 +2033,4 @@ function getQtdEixosClasse(nomeClasse: string) {
 }
 
 export { sincronizarPesquisasPendentes };
+
