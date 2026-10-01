@@ -1084,43 +1084,88 @@ export default function Pesquisa() {
                 }
                 const [taraMin, taraMax] = classeLimites.tara;
                 const [pbtMin, pbtMax] = classeLimites.pbt;
-                const [, capacidadeMax] = classeLimites.capacidade;
 
                 const pesoBrutoNum = Number(pesoBruto);
                 const taraNum = Number(tara);
-                const pesoCargaNum = carregado === "Sim" ? Number(pesoCarga) : null;
+                const pesoCargaNum = carregado === "Sim" ? Number(pesoCarga) : 0;
 
-                if (isNaN(pesoBrutoNum) || isNaN(taraNum) || (carregado === "Sim" && (pesoCargaNum === null || isNaN(pesoCargaNum)))) {
+                if (
+                  !Number.isFinite(pesoBrutoNum) ||
+                  !Number.isFinite(taraNum) ||
+                  pesoBrutoNum <= 0 ||
+                  taraNum <= 0 ||
+                  (carregado === "Sim" && !Number.isFinite(pesoCargaNum))
+                ) {
                   Alert.alert("Preencha os campos numéricos obrigatórios com valores válidos.");
                   return;
                 }
 
-                if (carregado === "Sim" && pesoCargaNum !== null && pesoCargaNum >= pesoBrutoNum) {
+                if (pesoBrutoNum <= taraNum) {
                   Alert.alert(
-                    "Peso da carga inválido",
-                    "O peso da carga deve ser menor que o peso bruto do veículo. Digite novamente."
+                    "Valores incompatíveis",
+                    "O Peso Bruto deve ser maior que a Tara do veículo."
                   );
-                  setPesoCarga("");
                   return;
                 }
 
                 if (pesoBrutoNum < pbtMin || pesoBrutoNum > pbtMax) {
-                  Alert.alert(`Peso bruto fora dos limites para a classe selecionada (${pbtMin}–${pbtMax}t).`);
+                  Alert.alert(
+                    `O Peso Bruto está fora do intervalo. Confirme com o motorista um valor entre ${pbtMin} t e ${pbtMax} t.`
+                  );
                   return;
                 }
 
-                if (taraNum < taraMin || taraNum > taraMax) {
-                  Alert.alert(`Tara fora dos limites para a classe selecionada (${taraMin}–${taraMax}t).`);
+                let percentualMinimo: number;
+                let percentualMaximo: number;
+
+                if (classeCaminhao === "2C (2 eixos)") {
+                  percentualMinimo = 0.3;
+                  percentualMaximo = 0.7;
+                } else if (
+                  classeCaminhao === "3C (3 eixos)" ||
+                  classeCaminhao === "4CD (4 eixos)"
+                ) {
+                  percentualMinimo = 0.3;
+                  percentualMaximo = 0.6;
+                } else if (
+                  classeCaminhao === "BITREM 3S2S2 (7 eixos)" ||
+                  classeCaminhao === "RODOTREM 3S2C4 (9 eixos)" ||
+                  classeCaminhao === "TRITREM 3S2S2S2 (9 eixos)" ||
+                  classeCaminhao === "3M6 (9 eixos)"
+                ) {
+                  percentualMinimo = 0.2;
+                  percentualMaximo = 0.45;
+                } else {
+                  percentualMinimo = 0.25;
+                  percentualMaximo = 0.5;
+                }
+
+                const taraMinPercentual = pesoBrutoNum * percentualMinimo;
+                const taraMaxPercentual = pesoBrutoNum * percentualMaximo;
+                const taraMinAceitavel = Math.max(taraMin, taraMinPercentual);
+                const taraMaxAceitavel = Math.min(taraMax, taraMaxPercentual);
+                const taraMinExibida = Math.ceil(taraMinAceitavel);
+                const taraMaxExibida = Math.floor(taraMaxAceitavel);
+
+                if (taraNum < taraMinAceitavel || taraNum > taraMaxAceitavel) {
+                  Alert.alert(
+                    `A Tara está fora do intervalo. Confirme com o motorista um valor entre ${taraMinExibida} t e ${taraMaxExibida} t.`
+                  );
                   return;
                 }
 
-                if (carregado === "Sim" && pesoCargaNum !== null && pesoCargaNum > capacidadeMax) {
-                  Alert.alert(`Peso da carga acima do limite para a classe selecionada (máximo de ${capacidadeMax}t).`);
+                const capacidadeCalculada = pesoBrutoNum - taraNum;
+
+                if (
+                  carregado === "Sim" &&
+                  (pesoCargaNum <= 0 || pesoCargaNum > capacidadeCalculada)
+                ) {
+                  const pesoCargaMaxExibido = Math.floor(capacidadeCalculada);
+                  Alert.alert(
+                    `O Peso da Carga está fora do intervalo. Confirme com o motorista um valor entre 1 t e ${pesoCargaMaxExibido} t.`
+                  );
                   return;
                 }
-               
-                // Monta o objeto para salvar (tara sempre calculada)
-                const taraCalculada = tara ? Number(tara) : null;
 
                 const dados = {
                   id: gerarUUID(),
@@ -1134,9 +1179,10 @@ export default function Pesquisa() {
                   frequencia,
                   eixosSuspenso,
                   mercadoria: mercadoria.startsWith("Outros") ? mercadoriaOutro : mercadoria,
-                  pesoCarga: Number(pesoCarga),
-                  tara: taraCalculada,
                   pesoBruto: pesoBrutoNum,
+                  tara: taraNum,
+                  capacidade: capacidadeCalculada,
+                  pesoCarga: carregado === "Sim" ? pesoCargaNum : 0,
                   carregado,
                   rendaFamiliar,
                   motivoViagem: motivoViagem.startsWith("Outros") ? motivoViagemOutro : motivoViagem,
